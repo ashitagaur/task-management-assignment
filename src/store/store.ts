@@ -44,6 +44,7 @@ export interface CreateTaskInput {
   title: string;
   description?: string;
   priority?: TaskPriority;
+  statusId?: string;
   assigneeIds?: string[];
   dueDate?: string | null;
 }
@@ -92,7 +93,11 @@ export interface AppStoreState {
     newStatusId: string,
     newPosition: number
   ) => AppResult<Task>;
-  moveTaskToList: (taskId: string, destListId: string) => AppResult<Task>;
+  moveTaskToList: (
+    taskId: string,
+    destListId: string,
+    targetStatusId?: string
+  ) => AppResult<Task>;
   reorderTask: (taskId: string, newPosition: number) => AppResult<Task>;
 
   // Session Mutations
@@ -495,15 +500,23 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       return failure('NOT_FOUND', 'Target list does not exist or is archived');
     }
 
-    // Default status: lowest position 'todo' category status in this list
+    // Status: requested valid status or default lowest position 'todo' category status in this list
     const listStatuses = Object.values(state.statusesById)
       .filter((s) => s.listId === listId)
       .sort((a, b) => a.position - b.position);
 
-    const todoStatus =
-      listStatuses.find((s) => s.category === 'todo') || listStatuses[0];
+    const requestedStatus = data.statusId
+      ? state.statusesById[data.statusId]
+      : undefined;
 
-    if (!todoStatus) {
+    const targetStatus =
+      (requestedStatus && requestedStatus.listId === listId
+        ? requestedStatus
+        : undefined) ||
+      listStatuses.find((s) => s.category === 'todo') ||
+      listStatuses[0];
+
+    if (!targetStatus) {
       return failure(
         'INVARIANT_VIOLATION',
         'List has no statuses configured'
@@ -512,7 +525,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
 
     // Position: appended to end of status column
     const tasksInColumn = Object.values(state.tasksById).filter(
-      (t) => t.primaryListId === listId && t.statusId === todoStatus.id
+      (t) => t.primaryListId === listId && t.statusId === targetStatus.id
     );
 
     const now = new Date().toISOString();
@@ -523,7 +536,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       title: trimmedTitle,
       description: data.description || '',
       primaryListId: listId,
-      statusId: todoStatus.id,
+      statusId: targetStatus.id,
       priority: data.priority || 'none',
       assigneeIds: data.assigneeIds || [],
       dueDate: data.dueDate !== undefined ? data.dueDate : null,
@@ -773,7 +786,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   },
 
   // 11. Move Task To Different List
-  moveTaskToList: (taskId, destListId) => {
+  moveTaskToList: (taskId, destListId, targetStatusId) => {
     const state = get();
     if (state.taskMutationInFlight) {
       return failure(
@@ -803,7 +816,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       );
     }
 
-    if (task.primaryListId === destListId) {
+    if (task.primaryListId === destListId && (!targetStatusId || targetStatusId === task.statusId)) {
       return success(task);
     }
 
@@ -819,10 +832,9 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       );
     }
 
-    const remappedStatus = resolveDestinationStatus(
-      sourceStatus,
-      destStatuses
-    );
+    const remappedStatus =
+      (targetStatusId && destStatuses.find((s) => s.id === targetStatusId)) ||
+      resolveDestinationStatus(sourceStatus, destStatuses);
 
     // Reindex remaining tasks in source column (contiguous 0..n-1)
     const remainingSource = Object.values(state.tasksById)

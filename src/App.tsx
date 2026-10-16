@@ -1,37 +1,82 @@
 import { useActiveList } from './hooks/useActiveList';
 import { AppShell } from './components/app/AppShell';
 import { useAppStore } from './store/store';
+import { useDrawer } from './hooks/useDrawer';
+import { KanbanBoard } from './components/board/KanbanBoard';
+import { ListView } from './components/list/ListView';
+import { TaskDrawer } from './components/drawer/TaskDrawer';
+import { ToastProvider } from './components/shared/Toast';
 
-export function App() {
+function AppContent() {
   const route = useActiveList();
   const viewMode = useAppStore((state) => state.viewMode);
+  const drawer = useDrawer();
+
+  const handleOpenCreate = (statusId?: string) => {
+    if (route.activeList) {
+      drawer.openCreate(route.activeList.id, statusId);
+    }
+  };
 
   return (
-    <AppShell route={route}>
-      {route.activeList ? (
-        <section
-          id="view-container"
-          aria-label={`${route.activeList.name} ${viewMode} view container`}
-          className="space-y-4"
-        >
-          {/* View Container Placeholder for T08 (Kanban) / T09 (Dense List) */}
-          <div className="p-8 sm:p-12 text-center rounded-2xl bg-white border border-fb-border shadow-fb-card">
-            <h2 className="text-base font-semibold text-fb-text-primary capitalize mb-1.5">
-              {viewMode} View
-            </h2>
-            <p className="text-xs text-fb-text-secondary max-w-md mx-auto leading-relaxed">
-              {viewMode === 'board'
-                ? 'Kanban board will display status columns and draggable task cards for this list.'
-                : 'Dense tabular list will display tasks with sorting and status filters.'}
-            </p>
+    <>
+      <AppShell
+        route={route}
+        onNewTask={() => handleOpenCreate()}
+      >
+        {route.activeList ? (
+          <section
+            id="view-container"
+            aria-label={`${route.activeList.name} ${viewMode} view container`}
+            className="w-full"
+          >
+            {viewMode === 'board' ? (
+              <KanbanBoard
+                listId={route.activeList.id}
+                onTaskClick={(task) => drawer.openEdit(task.id)}
+                onCreateTask={handleOpenCreate}
+              />
+            ) : (
+              <ListView
+                listId={route.activeList.id}
+                onTaskClick={(task) => drawer.openEdit(task.id)}
+                onCreateTask={() => handleOpenCreate()}
+              />
+            )}
+          </section>
+        ) : (
+          <div className="p-12 text-center text-fb-text-muted text-sm">
+            No list selected. Please choose a list from the navigation.
           </div>
-        </section>
-      ) : (
-        <div className="p-12 text-center text-fb-text-muted text-sm">
-          No list selected. Please choose a list from the navigation.
-        </div>
-      )}
-    </AppShell>
+        )}
+      </AppShell>
+
+      <TaskDrawer
+        isOpen={drawer.isOpen}
+        mode={drawer.mode}
+        taskId={drawer.taskId}
+        draft={drawer.draft}
+        isDirty={drawer.isDirty}
+        showDiscardModal={drawer.showDiscardModal}
+        showDeleteModal={drawer.showDeleteModal}
+        onUpdateField={drawer.updateField}
+        onRequestClose={drawer.requestClose}
+        onConfirmDiscard={drawer.confirmDiscard}
+        onCancelDiscard={drawer.cancelDiscard}
+        onRequestDelete={drawer.requestDelete}
+        onConfirmDelete={drawer.confirmDelete}
+        onCancelDelete={drawer.cancelDelete}
+        onSave={drawer.save}
+      />
+    </>
+  );
+}
+
+export function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

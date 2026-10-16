@@ -9,11 +9,13 @@ import { ViewModeToggle } from './ViewModeToggle';
 export interface WorkspaceHeaderProps {
   activeList: ContainerNode | null;
   activeListId: string | null;
+  onNewTask?: () => void;
 }
 
 export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   activeList,
   activeListId,
+  onNewTask,
 }) => {
   const fullState = useAppStore((state) => state);
   const activeUserId = useAppStore((state) => state.activeUserId);
@@ -97,8 +99,9 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
 
           <button
             type="button"
-            aria-label="Create new task (wired in T10)"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-fb-primary hover:bg-fb-primary/90 text-white text-xs font-semibold shadow-fb-button transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary focus-visible:ring-offset-2"
+            onClick={onNewTask}
+            aria-label="Create new task"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-fb-primary hover:bg-fb-primary/90 text-white text-xs font-semibold shadow-fb-button transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary focus-visible:ring-offset-2 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             <span>New task</span>

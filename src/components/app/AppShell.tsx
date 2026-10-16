@@ -9,10 +9,15 @@ import { RestrictedCard } from '../shared/RestrictedCard';
 
 export interface AppShellProps {
   route: ActiveListRoute;
+  onNewTask?: () => void;
   children?: React.ReactNode;
 }
 
-export const AppShell: React.FC<AppShellProps> = ({ route, children }) => {
+export const AppShell: React.FC<AppShellProps> = ({
+  route,
+  onNewTask,
+  children,
+}) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
 
@@ -111,6 +116,7 @@ export const AppShell: React.FC<AppShellProps> = ({ route, children }) => {
               <WorkspaceHeader
                 activeList={contextList}
                 activeListId={contextListId}
+                onNewTask={onNewTask}
               />
             )}
 
