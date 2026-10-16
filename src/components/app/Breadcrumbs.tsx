@@ -17,7 +17,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
 
   const crumbs = useMemo(() => {
     if (!activeListId) return [];
-    return getBreadcrumbs(fullState, activeListId);
+    return getBreadcrumbs(fullState, activeListId).filter((c) => c.type !== 'workspace');
   }, [fullState, activeListId]);
 
   if (crumbs.length === 0) {

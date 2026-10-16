@@ -81,18 +81,18 @@ export const INITIAL_CONTAINERS: Record<string, ContainerNode> = {
     archived: false,
   },
   // 3 Lists
-  'list-sprint-18': {
-    id: 'list-sprint-18',
-    name: 'Sprint 18',
+  'list-backlog': {
+    id: 'list-backlog',
+    name: 'Backlog',
     type: 'list',
     parentId: 'fld-q2-launch',
     position: 0,
     isPrivate: false,
     archived: false,
   },
-  'list-backlog': {
-    id: 'list-backlog',
-    name: 'Backlog',
+  'list-sprint-18': {
+    id: 'list-sprint-18',
+    name: 'Sprint 18',
     type: 'list',
     parentId: 'fld-q2-launch',
     position: 1,

@@ -72,23 +72,23 @@ export const UserSwitcher: React.FC = () => {
             ? 'User switching is disabled while a task mutation is in progress'
             : 'Switch user perspective'
         }
-        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg border border-fb-border bg-white text-fb-text-primary text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary ${
+        className={`h-[38px] flex items-center gap-2.5 px-3 rounded-lg border border-fb-border bg-white text-fb-text-primary text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary ${
           taskMutationInFlight
             ? 'opacity-60 cursor-not-allowed bg-gray-50'
             : 'hover:bg-gray-50 active:bg-gray-100 cursor-pointer shadow-sm'
         }`}
       >
         <Avatar initials={currentUser.initials} name={currentUser.name} size="sm" />
-        <div className="flex flex-col text-left leading-tight">
-          <span className="font-semibold text-fb-text-primary truncate max-w-[100px] sm:max-w-[120px]">
+        <div className="flex flex-col text-left justify-center leading-tight">
+          <span className="font-semibold text-fb-text-primary truncate max-w-[100px] sm:max-w-[120px] text-xs leading-none">
             {currentUser.name.split(' ')[0]}
           </span>
-          <span className="text-[10px] text-fb-text-muted capitalize">
+          <span className="text-[10px] text-fb-text-muted capitalize leading-none mt-0.5">
             {currentUser.role}
           </span>
         </div>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-fb-text-muted transition-transform duration-150 ${
+          className={`w-3.5 h-3.5 text-fb-text-muted transition-transform duration-150 shrink-0 ${
             isOpen ? 'rotate-180' : ''
           }`}
           aria-hidden="true"

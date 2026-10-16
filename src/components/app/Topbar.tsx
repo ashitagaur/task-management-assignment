@@ -15,7 +15,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   onToggleMobileSidebar,
 }) => {
   return (
-    <header className="h-[58px] min-h-[58px] bg-white border-b border-fb-border px-4 lg:px-6 flex items-center justify-between gap-4 z-20 shrink-0">
+    <header className="h-16 min-h-[64px] bg-white border-b border-fb-border px-4 lg:px-6 flex items-center justify-between gap-4 z-20 shrink-0">
       {/* Left: Mobile menu toggle + Breadcrumbs */}
       <div className="flex items-center gap-3 min-w-0">
         <button
@@ -46,8 +46,17 @@ export const Topbar: React.FC<TopbarProps> = ({
             placeholder="Search tasks..."
             aria-label="Search tasks (visual-only preview)"
             title="Search is visual-only in this version"
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-fb-border bg-white text-fb-text-primary placeholder:text-fb-text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary cursor-default"
+            className="w-full h-[38px] pl-9 pr-3 text-xs rounded-lg border border-fb-border bg-white text-fb-text-primary placeholder:text-fb-text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary cursor-default"
           />
+        </div>
+
+        {/* Simulation mode indicator matching Figma Frame 1:3 & 1:38 */}
+        <div
+          className="hidden sm:flex items-center gap-1.5 h-[38px] px-3 rounded-lg border border-amber-200/80 bg-amber-50/60 text-xs text-amber-900 select-none cursor-default font-medium"
+          title="Simulation mode (configured in T13)"
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
+          <span>Simulation: Normal</span>
         </div>
 
         {/* User Switcher */}

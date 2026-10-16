@@ -30,7 +30,9 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   // Derive ancestor breadcrumb subtitle (e.g. "Q2 Launch · Engineering")
   const ancestorSubtitle = useMemo(() => {
     if (!activeListId) return '';
-    const crumbs = getBreadcrumbs(fullState, activeListId);
+    const crumbs = getBreadcrumbs(fullState, activeListId).filter(
+      (c) => c.type !== 'workspace'
+    );
     if (crumbs.length <= 1) return '';
     return crumbs
       .slice(0, crumbs.length - 1)
@@ -50,59 +52,57 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   const listName = activeList?.name ?? (activeListId ? 'Restricted List' : 'Select a List');
 
   return (
-    <div className="mb-6">
-      {/* List Title & Count */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-fb-text-primary tracking-tight">
-              {listName}
-            </h1>
-            {activeList && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-fb-text-secondary border border-fb-border">
-                {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
-              </span>
-            )}
-          </div>
-          {ancestorSubtitle && (
-            <p className="text-xs text-fb-text-muted mt-1 font-medium">
-              {ancestorSubtitle}
-            </p>
+    <div className="mb-6 space-y-4">
+      {/* Row 1: Title, Task Count, Subtitle (matches Figma Frame 1:3 & 1:62) */}
+      <div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-fb-text-primary tracking-tight">
+            {listName}
+          </h1>
+          {activeList && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-fb-text-secondary border border-fb-border">
+              {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+            </span>
           )}
         </div>
+        {ancestorSubtitle && (
+          <p className="text-xs text-fb-text-muted mt-1 font-medium">
+            {ancestorSubtitle}
+          </p>
+        )}
+      </div>
 
-        {/* View Toggle & Action Buttons */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <ViewModeToggle />
+      {/* Row 2: ViewModeToggle on Left, Action buttons on Right (EXACT match to Figma Frame 1:3 & 1:62) */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <ViewModeToggle />
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Filter tasks (visual placeholder)"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-white text-fb-text-secondary hover:text-fb-text-primary text-xs font-medium transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Filter</span>
-            </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Filter tasks (visual placeholder)"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-white text-fb-text-secondary hover:text-fb-text-primary text-xs font-medium transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Filter</span>
+          </button>
 
-            <button
-              type="button"
-              aria-label="Sort tasks (visual placeholder)"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-white text-fb-text-secondary hover:text-fb-text-primary text-xs font-medium transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
-            >
-              <ArrowUpDown className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Sort</span>
-            </button>
+          <button
+            type="button"
+            aria-label="Sort tasks (visual placeholder)"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-white text-fb-text-secondary hover:text-fb-text-primary text-xs font-medium transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Sort</span>
+          </button>
 
-            <button
-              type="button"
-              aria-label="Create new task (wired in T10)"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-fb-primary hover:bg-fb-primary/90 text-white text-xs font-semibold shadow-fb-button transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary focus-visible:ring-offset-2"
-            >
-              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>New task</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            aria-label="Create new task (wired in T10)"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-fb-primary hover:bg-fb-primary/90 text-white text-xs font-semibold shadow-fb-button transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary focus-visible:ring-offset-2"
+          >
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>New task</span>
+          </button>
         </div>
       </div>
 

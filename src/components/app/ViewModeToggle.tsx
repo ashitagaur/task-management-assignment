@@ -20,7 +20,7 @@ export const ViewModeToggle: React.FC = () => {
         onClick={() => setViewMode('board')}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary ${
           viewMode === 'board'
-            ? 'bg-white text-fb-text-primary shadow-sm font-semibold'
+            ? 'bg-white text-fb-primary shadow-sm font-semibold'
             : 'text-fb-text-secondary hover:text-fb-text-primary'
         }`}
       >
@@ -36,7 +36,7 @@ export const ViewModeToggle: React.FC = () => {
         onClick={() => setViewMode('list')}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary ${
           viewMode === 'list'
-            ? 'bg-white text-fb-text-primary shadow-sm font-semibold'
+            ? 'bg-white text-fb-primary shadow-sm font-semibold'
             : 'text-fb-text-secondary hover:text-fb-text-primary'
         }`}
       >

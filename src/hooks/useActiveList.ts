@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAppStore, getPermissionContext } from '../store/store';
 import { getVisibleLists } from '../store/selectors';
 import { canViewNode } from '../domain/permissions';
@@ -9,9 +9,9 @@ export interface ActiveListRoute {
   activeListId: string | null;
   /** The container node corresponding to activeListId, or null if unresolved */
   activeList: ContainerNode | null;
-  /** True if the target list exists but the active user is forbidden from viewing it */
+  /** True if the target list exists and is unarchived, but the active user is forbidden from viewing it */
   isForbidden: boolean;
-  /** True if the target list does not exist or is not a list */
+  /** True if the target list does not exist, is not a list, or is archived */
   isNotFound: boolean;
   /** Navigation helper to switch lists via URL hash */
   navigateToList: (listId: string) => void;
@@ -19,23 +19,53 @@ export interface ActiveListRoute {
 
 /**
  * Parses the listId from an approved hash route (#/list/:listId).
+ * Supports optional trailing slash.
  * Returns null if the hash does not match the approved pattern.
  */
 export function parseListIdFromHash(hash: string): string | null {
-  const match = hash.match(/^#\/list\/([a-zA-Z0-9_-]+)$/);
+  const match = hash.match(/^#\/list\/([a-zA-Z0-9_-]+)\/?$/);
   return match && match[1] ? match[1] : null;
 }
 
 /**
+ * Checks whether a node or any of its ancestor containers is archived.
+ * Fails closed (returns true) if an ancestry cycle or broken hierarchy is detected.
+ */
+export function isNodeOrAncestorArchived(
+  nodeId: string,
+  containersById: Record<string, ContainerNode>
+): boolean {
+  let current: ContainerNode | undefined = containersById[nodeId];
+  const visited = new Set<string>();
+
+  while (current) {
+    if (visited.has(current.id)) return true; // Cycle detected -> treat as invalid/archived
+    visited.add(current.id);
+
+    if (current.archived) return true;
+    if (!current.parentId) break;
+
+    const parent = containersById[current.parentId];
+    if (!parent) return true; // Broken parent hierarchy -> fail closed
+    current = parent;
+  }
+
+  return false;
+}
+
+/**
  * Custom hook for Hash Routing.
- * 
- * Rules enforced:
- * - URL/hash (#/list/:listId) is the ONLY source of truth for the active list.
+ *
+ * Invariant rules enforced:
+ * - URL/hash (#/list/:listId) from app root (/) is the ONLY source of truth for the active list.
+ * - Any unexpected pathname prefix (e.g. /jk, /foo) is normalized to the app root (/),
+ *   preserving the intended hash if present.
  * - Never stores activeListId in Zustand.
  * - Gracefully handles default route (#/ or empty) with fallback to first visible list.
- * - Handles invalid/nonexistent list deterministically.
- * - Reconciles route on user switch (redirects if the new user lacks access).
- * - Exposes isForbidden for direct navigation to restricted lists.
+ * - Deterministically handles invalid, non-existent, or archived routes by redirecting to fallback.
+ * - Reconciles automatically when store state changes (archive, permissions, hierarchy).
+ * - Distinguishes invalid/archived routes (fallback) from forbidden direct routes (RestrictedCard).
+ * - Preserves URL on forbidden routes (including user switch or permission change).
  */
 export function useActiveList(): ActiveListRoute {
   const containersById = useAppStore((state) => state.containersById);
@@ -47,18 +77,31 @@ export function useActiveList(): ActiveListRoute {
     return typeof window !== 'undefined' ? window.location.hash : '';
   });
 
-  // Track the previous user ID to detect user switches for route reconciliation
-  const prevUserIdRef = useRef<string>(activeUserId);
-
-  // Listen to browser hashchange events
+  // Pathname normalization effect:
+  // Our routing contract is strictly hash-only from the root (/#/list/:listId).
+  // If loaded with an arbitrary pathname (e.g. /jk#/list/...), normalize to / preserving hash.
   useEffect(() => {
-    const handleHashChange = () => {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      const canonicalPath = `/${window.location.hash || ''}`;
+      window.history.replaceState(null, '', canonicalPath);
+    }
+  }, []);
+
+  // Listen to browser hashchange and popstate events
+  useEffect(() => {
+    const handleLocationChange = () => {
+      // Normalize pathname to root if needed
+      if (window.location.pathname !== '/') {
+        window.history.replaceState(null, '', `/${window.location.hash || ''}`);
+      }
       setCurrentHash(window.location.hash);
     };
 
-    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
     };
   }, []);
 
@@ -77,50 +120,75 @@ export function useActiveList(): ActiveListRoute {
   // Parse candidate listId from current hash
   const rawListId = parseListIdFromHash(currentHash);
 
-  // Resolve target container node
+  // Resolve target container node and structural status
   const targetNode = rawListId ? containersById[rawListId] : null;
-  const isValidList = Boolean(targetNode && targetNode.type === 'list' && !targetNode.archived);
+  const existsAsList = Boolean(targetNode && targetNode.type === 'list');
+  const isArchived = Boolean(
+    rawListId && targetNode && isNodeOrAncestorArchived(rawListId, containersById)
+  );
 
-  // Check visibility if valid list
+  // A list is valid if it exists, is of type 'list', and neither it nor any ancestor is archived
+  const isValidList = existsAsList && !isArchived;
+
+  // Check visibility for the active user if structurally valid
   const canView = isValidList && rawListId
     ? canViewNode(activeUserId, rawListId, permissionContext)
     : false;
 
+  // Forbidden: list exists and is unarchived, but active user lacks read capability
+  // (In this state, preserve the URL and display RestrictedCard)
   const isForbidden = isValidList && !canView;
+
+  // Not found: nonexistent node, wrong container type, or archived node/ancestor
   const isNotFound = Boolean(rawListId && !isValidList);
 
-  // Navigate helper
-  const navigateToList = useCallback((listId: string) => {
-    window.location.hash = `#/list/${listId}`;
+  // Helper to replace URL to canonical app root (/) and update local state synchronously
+  const redirectTo = useCallback((newHash: string) => {
+    if (typeof window !== 'undefined') {
+      const canonicalUrl = `/${newHash}`;
+      window.history.replaceState(null, '', canonicalUrl);
+      setCurrentHash(newHash);
+    }
   }, []);
 
-  // Effect: Route reconciliation and default fallback
-  useEffect(() => {
-    const isUserSwitch = prevUserIdRef.current !== activeUserId;
-    prevUserIdRef.current = activeUserId;
+  // Navigation helper ensuring path is always canonical app root (/)
+  const navigateToList = useCallback((listId: string) => {
+    const newHash = `#/list/${listId}`;
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname !== '/') {
+        window.history.pushState(null, '', `/${newHash}`);
+      } else {
+        window.location.hash = newHash;
+      }
+      setCurrentHash(newHash);
+    }
+  }, []);
 
-    // 1. If empty or root hash, redirect to first visible list
+  // Effect: Route reconciliation on state changes, archive, invalid paths, and default fallback
+  useEffect(() => {
+    // 1. Empty, root, or unparseable hash -> redirect to first visible list
     if (!rawListId || currentHash === '' || currentHash === '#' || currentHash === '#/') {
       if (defaultListId) {
-        window.location.replace(`#/list/${defaultListId}`);
+        redirectTo(`#/list/${defaultListId}`);
       }
       return;
     }
 
-    // 2. If list is completely invalid or archived, redirect to fallback
+    // 2. Trailing slash normalization (e.g. #/list/list-backlog/ -> #/list/list-backlog)
+    if (currentHash.endsWith('/') && rawListId) {
+      redirectTo(`#/list/${rawListId}`);
+      return;
+    }
+
+    // 3. Invalid, nonexistent, or archived list/ancestor -> redirect to fallback
     if (isNotFound) {
       if (defaultListId) {
-        window.location.replace(`#/list/${defaultListId}`);
+        redirectTo(`#/list/${defaultListId}`);
       }
       return;
     }
 
-    // 3. User switch reconciliation: If user switched and current list is now denied, redirect to fallback
-    if (isUserSwitch && isForbidden) {
-      if (defaultListId) {
-        window.location.replace(`#/list/${defaultListId}`);
-      }
-    }
+    // 4. If current route is forbidden, we preserve the URL so RestrictedCard can render.
   }, [
     activeUserId,
     rawListId,
@@ -128,11 +196,31 @@ export function useActiveList(): ActiveListRoute {
     isNotFound,
     isForbidden,
     defaultListId,
+    containersById,
+    redirectTo,
   ]);
 
+  // Determine active list for rendering
+  // If route is forbidden, keep requested list so RestrictedCard can render target info
+  // If route is valid, render requested list
+  // If route is invalid / not found, fall back to defaultListId immediately so UI stays responsive
+  const effectiveListId = isForbidden
+    ? rawListId
+    : isValidList
+    ? rawListId
+    : defaultListId;
+
+  const effectiveNode: ContainerNode | null = isForbidden
+    ? targetNode ?? null
+    : isValidList && targetNode
+    ? targetNode
+    : defaultListId
+    ? containersById[defaultListId] ?? null
+    : null;
+
   return {
-    activeListId: rawListId,
-    activeList: isValidList && targetNode ? targetNode : null,
+    activeListId: effectiveListId,
+    activeList: effectiveNode,
     isForbidden,
     isNotFound,
     navigateToList,
