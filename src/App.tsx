@@ -24,7 +24,7 @@ function AppContent() {
         route={route}
         onNewTask={() => handleOpenCreate()}
       >
-        {route.activeList ? (
+        {route.state === 'access' && route.activeList ? (
           <section
             id="view-container"
             aria-label={`${route.activeList.name} ${viewMode} view container`}
@@ -44,11 +44,7 @@ function AppContent() {
               />
             )}
           </section>
-        ) : (
-          <div className="p-12 text-center text-fb-text-muted text-sm">
-            No list selected. Please choose a list from the navigation.
-          </div>
-        )}
+        ) : null}
       </AppShell>
 
       <TaskDrawer

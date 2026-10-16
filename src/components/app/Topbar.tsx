@@ -2,15 +2,18 @@ import React from 'react';
 import { Menu, Search } from 'lucide-react';
 import { Breadcrumbs } from './Breadcrumbs';
 import { UserSwitcher } from './UserSwitcher';
+import { RouteState } from '../../hooks/useActiveList';
 
 export interface TopbarProps {
   activeListId: string | null;
+  routeState?: RouteState;
   onNavigate: (listId: string) => void;
   onToggleMobileSidebar: () => void;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
   activeListId,
+  routeState = 'access',
   onNavigate,
   onToggleMobileSidebar,
 }) => {
@@ -28,7 +31,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         </button>
 
         <div className="min-w-0 overflow-hidden">
-          <Breadcrumbs activeListId={activeListId} onNavigate={onNavigate} />
+          <Breadcrumbs
+            activeListId={activeListId}
+            routeState={routeState}
+            onNavigate={onNavigate}
+          />
         </div>
       </div>
 

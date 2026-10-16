@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Lock } from 'lucide-react';
 import { useAppStore } from '../../store/store';
-import { getVisibleLists } from '../../store/selectors';
 import { ActiveListRoute } from '../../hooks/useActiveList';
 import { Topbar } from './Topbar';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { Sidebar } from '../sidebar/Sidebar';
 import { RestrictedCard } from '../shared/RestrictedCard';
+import { NotFoundCard } from '../shared/NotFoundCard';
 
 export interface AppShellProps {
   route: ActiveListRoute;
@@ -22,10 +23,15 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
 
   const activeUserId = useAppStore((state) => state.activeUserId);
-  const fullState = useAppStore((state) => state);
-  const visibleLists = getVisibleLists(fullState);
 
-  const { activeListId, activeList, isForbidden, navigateToList } = route;
+  const {
+    state: routeState,
+    activeListId,
+    activeList,
+    targetContainer,
+    fallbackList,
+    navigateToList,
+  } = route;
 
   // Close mobile sidebar on Escape key
   useEffect(() => {
@@ -46,23 +52,20 @@ export const AppShell: React.FC<AppShellProps> = ({
     setMobileSidebarOpen(false);
   };
 
-  const fallbackList = visibleLists[0] || null;
-  // When a route is forbidden, the workspace chrome (sidebar highlight, topbar breadcrumbs, header & banner)
-  // renders the accessible active context (e.g. Backlog) while presenting the 403 Restricted Card for the target resource,
-  // matching Figma Frame 1:882 (04 · Permissions / Bob).
-  const contextList = isForbidden && fallbackList ? fallbackList : activeList;
-  const contextListId = contextList?.id || activeListId;
+  // In non-access states (forbidden, not-found, no-visible-lists), no sidebar item should be marked active
+  const sidebarActiveListId = routeState === 'access' ? activeListId : null;
 
   return (
     <div className="h-screen w-screen flex bg-fb-canvas overflow-hidden font-sans">
       {/* Desktop Sidebar (fixed 248px or compact 68px rail, hidden on mobile/tablet) */}
       <aside
         aria-label="Desktop navigation sidebar"
-        className={`hidden lg:flex lg:flex-col ${desktopSidebarCollapsed ? 'w-[68px] min-w-[68px]' : 'w-[248px] min-w-[248px]'
-          } bg-fb-sidebar shrink-0 border-r border-gray-800 z-30 transition-[width] duration-200 ease-in-out`}
+        className={`hidden lg:flex lg:flex-col ${
+          desktopSidebarCollapsed ? 'w-[68px] min-w-[68px]' : 'w-[248px] min-w-[248px]'
+        } bg-fb-sidebar shrink-0 border-r border-gray-800 z-30 transition-[width] duration-200 ease-in-out`}
       >
         <Sidebar
-          activeListId={contextListId}
+          activeListId={sidebarActiveListId}
           onSelectList={handleSelectRoute}
           isCollapsed={desktopSidebarCollapsed}
           onToggleCollapse={() => setDesktopSidebarCollapsed((prev) => !prev)}
@@ -87,7 +90,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             className="relative w-[260px] max-w-[85vw] bg-fb-sidebar h-full shadow-2xl flex flex-col z-10"
           >
             <Sidebar
-              activeListId={contextListId}
+              activeListId={sidebarActiveListId}
               onSelectList={handleSelectRoute}
               onCloseMobile={() => setMobileSidebarOpen(false)}
               isMobile
@@ -98,9 +101,10 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Right Region: Topbar + Main Viewport */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Topbar */}
+        {/* Topbar with routing state awareness for breadcrumbs */}
         <Topbar
-          activeListId={contextListId}
+          activeListId={sidebarActiveListId}
+          routeState={routeState}
           onNavigate={navigateToList}
           onToggleMobileSidebar={() => setMobileSidebarOpen(true)}
         />
@@ -111,30 +115,43 @@ export const AppShell: React.FC<AppShellProps> = ({
           className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8"
         >
           <div className="mx-auto">
-            {/* Workspace Header & Permission Feedback Banner (always rendered when user has accessible lists) */}
-            {contextList && (
+            {/* Workspace Header is ONLY rendered for valid, accessible lists (never on forbidden 403, 404, or empty states) */}
+            {routeState === 'access' && activeList && (
               <WorkspaceHeader
-                activeList={contextList}
-                activeListId={contextListId}
+                activeList={activeList}
+                activeListId={activeListId}
                 onNewTask={onNewTask}
               />
             )}
 
-            {/* Viewport Content */}
-            {isForbidden ? (
+            {/* Viewport Content: Explicit product states */}
+            {routeState === 'forbidden' ? (
               <RestrictedCard
-                targetContainer={activeList}
-                containerName={activeList?.name}
+                targetContainer={targetContainer}
+                containerName={targetContainer?.name}
                 fallbackList={fallbackList}
                 onNavigate={navigateToList}
               />
-            ) : visibleLists.length === 0 ? (
+            ) : routeState === 'not-found' ? (
+              <NotFoundCard
+                fallbackList={fallbackList}
+                onNavigate={navigateToList}
+              />
+            ) : routeState === 'no-visible-lists' ? (
               <div
                 role="status"
-                aria-label="No visible lists"
-                className="p-8 text-center rounded-2xl bg-white border border-fb-border text-fb-text-muted text-xs max-w-md mx-auto my-12"
+                aria-label="No accessible lists"
+                className="p-12 text-center rounded-2xl bg-white border border-fb-border text-fb-text-muted text-sm max-w-md mx-auto my-16 shadow-fb-card"
               >
-                No lists are visible to your account.
+                <div className="w-12 h-12 rounded-full bg-gray-50 border border-fb-border flex items-center justify-center text-fb-text-muted mx-auto mb-4 shadow-xs">
+                  <Lock className="w-6 h-6 text-fb-text-secondary" aria-hidden="true" />
+                </div>
+                <h3 className="text-base font-semibold text-fb-text-primary mb-1">
+                  No accessible lists
+                </h3>
+                <p className="text-xs text-fb-text-secondary leading-relaxed">
+                  Your account doesn&apos;t currently have access to any lists in this workspace.
+                </p>
               </div>
             ) : (
               children

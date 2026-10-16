@@ -15,7 +15,7 @@ interface ToastContextType {
   removeToast: (id: string) => void;
 }
 
-const ToastContext = createContext<ToastContextType | null>(null);
+export const ToastContext = createContext<ToastContextType | null>(null);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);

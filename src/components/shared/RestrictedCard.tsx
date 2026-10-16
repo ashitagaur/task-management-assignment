@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Lock, ArrowRight } from 'lucide-react';
 import { ContainerNode } from '../../domain/types';
 import { useAppStore } from '../../store/store';
-import { getBreadcrumbs } from '../../store/selectors';
 
 export interface RestrictedCardProps {
   /** The container node that is restricted, if known */
@@ -25,7 +24,6 @@ export const RestrictedCard: React.FC<RestrictedCardProps> = ({
   fallbackList,
   onNavigate,
 }) => {
-  const fullState = useAppStore((state) => state);
   const activeUserId = useAppStore((state) => state.activeUserId);
   const usersById = useAppStore((state) => state.usersById);
   const currentUser = usersById[activeUserId];
@@ -38,17 +36,7 @@ export const RestrictedCard: React.FC<RestrictedCardProps> = ({
       ? 'her'
       : 'you';
 
-  const displayName = useMemo(() => {
-    if (containerName) return containerName;
-    if (!targetContainer) return 'this resource';
-    const crumbs = getBreadcrumbs(fullState, targetContainer.id).filter(
-      (c) => c.type !== 'workspace'
-    );
-    if (crumbs.length > 1) {
-      return crumbs.map((c) => c.name).join(' / ');
-    }
-    return targetContainer.name;
-  }, [containerName, targetContainer, fullState]);
+  const displayName = targetContainer?.name || containerName || 'this resource';
 
   return (
     <div
@@ -87,7 +75,7 @@ export const RestrictedCard: React.FC<RestrictedCardProps> = ({
           onClick={() => onNavigate(fallbackList.id)}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-fb-primary hover:bg-fb-primary/90 text-white text-xs font-semibold shadow-fb-button transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary focus-visible:ring-offset-2"
         >
-          <span>Go to {fallbackList.name}</span>
+          <span>Go to my workspace</span>
           <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}

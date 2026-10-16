@@ -1,26 +1,52 @@
 import React, { useMemo } from 'react';
 import { useAppStore } from '../../store/store';
 import { getBreadcrumbs } from '../../store/selectors';
+import { RouteState } from '../../hooks/useActiveList';
 
 export interface BreadcrumbsProps {
   activeListId: string | null;
+  routeState?: RouteState;
   className?: string;
   onNavigate?: (listId: string) => void;
 }
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
   activeListId,
+  routeState = 'access',
   className = '',
   onNavigate,
 }) => {
   const fullState = useAppStore((state) => state);
 
   const crumbs = useMemo(() => {
-    if (!activeListId) return [];
+    if (!activeListId || routeState !== 'access') return [];
     return getBreadcrumbs(fullState, activeListId).filter((c) => c.type !== 'workspace');
-  }, [fullState, activeListId]);
+  }, [fullState, activeListId, routeState]);
 
-  if (crumbs.length === 0) {
+  // Neutral state: 404 Page Not Found
+  if (routeState === 'not-found') {
+    return (
+      <nav aria-label="Breadcrumb" className={`flex items-center text-xs text-fb-text-muted ${className}`}>
+        <span className="font-semibold text-fb-text-secondary" aria-current="page">
+          Page not found
+        </span>
+      </nav>
+    );
+  }
+
+  // Neutral state: 403 Forbidden / Restricted (does not leak hierarchy)
+  if (routeState === 'forbidden') {
+    return (
+      <nav aria-label="Breadcrumb" className={`flex items-center text-xs text-fb-text-muted ${className}`}>
+        <span className="font-semibold text-fb-text-secondary" aria-current="page">
+          Restricted
+        </span>
+      </nav>
+    );
+  }
+
+  // Neutral state: No Accessible Lists
+  if (routeState === 'no-visible-lists' || crumbs.length === 0) {
     return (
       <nav aria-label="Breadcrumb" className={`flex items-center text-xs text-fb-text-muted ${className}`}>
         <span>Flowboard</span>
