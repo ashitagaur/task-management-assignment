@@ -1,0 +1,53 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        'fb-primary': '#6C5CE7',
+        'fb-primary-soft': '#F1EEFF',
+        'fb-canvas': '#F7F8FC',
+        'fb-sidebar': '#111827',
+        'fb-sidebar-active': '#242039',
+        'fb-text-primary': '#101828',
+        'fb-text-secondary': '#475467',
+        'fb-text-muted': '#667085',
+        'fb-text-subtle': '#98A2B3',
+        'fb-border': '#E4E7EC',
+        'fb-border-soft': '#E8EAF2',
+        'fb-success': '#12B76A',
+        'fb-success-soft': '#ECFDF3',
+        'fb-success-banner': '#F0FDF4',
+        'fb-warning': '#F79009',
+        'fb-warning-soft': '#FFF7ED',
+        'fb-danger': '#E5484D',
+        'fb-danger-soft': '#FEF2F2',
+        'fb-danger-border': '#FECDCA',
+        'fb-danger-toast-title': '#991B1B',
+        'fb-urgent-bg': '#FEE4E2',
+        'fb-urgent-text': '#B42318',
+      },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+      },
+      borderRadius: {
+        'fb-sm': '8px',
+        'fb-md': '10px',
+        'fb-lg': '12px',
+        'fb-xl': '14px',
+        'fb-2xl': '16px',
+      },
+      boxShadow: {
+        'fb-button': '0px 4px 10px 0px rgba(79, 70, 229, 0.18)',
+        'fb-card': '0px 2px 7px 0px rgba(16, 24, 40, 0.05)',
+        'fb-drawer': '-8px 0px 24px 0px rgba(16, 24, 40, 0.16)',
+        'fb-modal': '0px 6px 18px 0px rgba(16, 24, 40, 0.06)',
+        'fb-toast': '0px 5px 16px 0px rgba(16, 24, 40, 0.08)',
+      },
+    },
+  },
+  plugins: [],
+};

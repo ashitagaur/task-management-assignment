@@ -209,10 +209,6 @@ Each step adheres strictly to the workflow:
 ### Installation & Local Development
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd flowboard
-
 # Install dependencies
 npm install
 
