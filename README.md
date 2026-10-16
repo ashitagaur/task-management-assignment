@@ -163,7 +163,7 @@ Per the assignment guidance (*"Pick at most two if MVP is solid"*), exactly two 
 
 ### Explicitly Excluded / Cut Scope
 - Client-side full-text search engine (visual search bar retained in UI).
-- Dynamic audit logging / live activity feed (read-only static activity specimens retained).
+- Dynamic audit logging / activity feed (excluded; Task Drawer is streamlined for task properties and description).
 - Dark mode and mobile redesign (desktop-first with responsive adaptation).
 - Container DnD reordering (button-based reorder satisfies assignment).
 

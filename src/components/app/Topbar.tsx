@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search } from 'lucide-react';
+import { Menu, Search, Info } from 'lucide-react';
 import { Breadcrumbs } from './Breadcrumbs';
 import { UserSwitcher } from './UserSwitcher';
 import { RouteState } from '../../hooks/useActiveList';
@@ -46,20 +46,36 @@ export const Topbar: React.FC<TopbarProps> = ({
 
       {/* Center / Right controls */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Visual search input matching Figma Node 1:45 */}
-        <div className="relative hidden md:block w-48 sm:w-60">
+        {/* Search input with Premium affordance */}
+        <div className="relative group hidden md:block w-48 sm:w-60">
           <Search
-            className="w-4 h-4 text-fb-text-subtle absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            className="w-4 h-4 text-fb-text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
             aria-hidden="true"
           />
           <input
             type="text"
             readOnly
+            tabIndex={0}
+            aria-disabled="true"
             placeholder="Search tasks..."
-            aria-label="Search tasks (visual-only preview)"
-            title="Search is visual-only in this version"
-            className="w-full h-[38px] pl-9 pr-3 text-xs rounded-lg border border-fb-border bg-white text-fb-text-primary placeholder:text-fb-text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary cursor-default"
+            aria-label="Search tasks (Upgrade to Premium)"
+            onKeyDown={(e) => e.preventDefault()}
+            className="w-full h-[38px] pl-9 pr-8 text-xs rounded-lg border border-fb-border bg-gray-50/80 text-fb-text-muted placeholder:text-fb-text-muted/70 cursor-not-allowed select-none opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
           />
+          <div
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-fb-text-muted"
+            aria-hidden="true"
+          >
+            <Info className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+          </div>
+          {/* Tooltip: Upgrade to Premium */}
+          <div
+            role="tooltip"
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 pointer-events-none px-2 py-1 text-[11px] font-medium text-white bg-gray-900 rounded-md shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 z-50"
+          >
+            Upgrade to Premium
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-gray-900" />
+          </div>
         </div>
 
         {/* Interactive simulation toggle matching Figma Frame 1:3 & 1:38 */}

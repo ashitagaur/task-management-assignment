@@ -66,7 +66,6 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   const statusesById = useAppStore((state) => state.statusesById);
   const containersById = useAppStore((state) => state.containersById);
   const tasksById = useAppStore((state) => state.tasksById);
-  const activityByTaskId = useAppStore((state) => state.activityByTaskId);
   const taskMutationInFlight = useAppStore((state) => state.taskMutationInFlight);
 
   const context = getPermissionContext(fullState);
@@ -113,9 +112,6 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     .sort((a, b) => a.position - b.position);
 
   const currentStatus = statusesById[draft.statusId] || availableStatuses[0];
-
-  // Activities for this task (100% static read-only presentation)
-  const activities = (taskId && activityByTaskId[taskId]) || [];
 
   // Focus management: store previous active element, lock body scroll, and restore on close
   useEffect(() => {
@@ -467,52 +463,6 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
               className="w-full p-3 rounded-xl border border-fb-border bg-white text-fb-text-primary placeholder:text-fb-text-subtle text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary resize-y disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
-
-          {/* 4. ACTIVITY SECTION (Figma Screenshot 5 & Node 1:551) */}
-          {mode === 'edit' && (
-            <div className="space-y-3 pt-2">
-              <h4 className="text-[11px] font-bold text-fb-text-muted uppercase tracking-wider">
-                Activity
-              </h4>
-
-              {activities.length > 0 ? (
-                <div className="space-y-3 border-l-2 border-gray-100 ml-2 pl-4">
-                  {activities.map((act) => {
-                    const user = usersById[act.userId];
-                    return (
-                      <div key={act.id} className="relative flex items-start gap-3 text-xs">
-                        {user ? (
-                          <Avatar
-                            initials={user.initials}
-                            name={user.name}
-                            size="xs"
-                            className="shrink-0 mt-0.5"
-                          />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-gray-200 shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-fb-text-primary leading-tight">
-                            <span className="font-semibold">
-                              {user ? user.name : 'Unknown user'}{' '}
-                            </span>
-                            <span className="text-fb-text-secondary">{act.text}</span>
-                          </p>
-                          <span className="text-[10px] text-fb-text-muted mt-0.5 inline-block">
-                            {act.relativeTime}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs text-fb-text-muted italic">
-                  No activity history recorded for this task yet.
-                </p>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Drawer Footer */}

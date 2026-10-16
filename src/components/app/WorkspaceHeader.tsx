@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { SlidersHorizontal, ArrowUpDown, Plus, Eye } from 'lucide-react';
+import { SlidersHorizontal, ArrowUpDown, Plus, Eye, Info } from 'lucide-react';
 import { useAppStore } from '../../store/store';
 import { getBreadcrumbs, getTaskCount } from '../../store/selectors';
 import { getEffectiveCapabilities } from '../../domain/permissions';
@@ -79,23 +79,67 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
         <ViewModeToggle />
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Filter tasks (visual placeholder)"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-white text-fb-text-secondary hover:text-fb-text-primary text-xs font-medium transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Filter</span>
-          </button>
+          {/* Filter with Premium affordance */}
+          <div className="relative group inline-flex items-center">
+            <button
+              type="button"
+              aria-disabled="true"
+              aria-label="Filter tasks (Upgrade to Premium)"
+              tabIndex={0}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-gray-50/80 text-fb-text-muted text-xs font-medium cursor-not-allowed select-none opacity-80 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-fb-text-muted" aria-hidden="true" />
+              <span>Filter</span>
+              <Info className="w-3 h-3 text-fb-text-muted/70 shrink-0 ml-0.5" aria-hidden="true" />
+            </button>
+            <div
+              role="tooltip"
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 pointer-events-none px-2 py-1 text-[11px] font-medium text-white bg-gray-900 rounded-md shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 z-50"
+            >
+              Upgrade to Premium
+              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+            </div>
+          </div>
 
-          <button
-            type="button"
-            aria-label="Sort tasks (visual placeholder)"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-white text-fb-text-secondary hover:text-fb-text-primary text-xs font-medium transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
-          >
-            <ArrowUpDown className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Sort</span>
-          </button>
+          {/* Sort with Premium affordance */}
+          <div className="relative group inline-flex items-center">
+            <button
+              type="button"
+              aria-disabled="true"
+              aria-label="Sort tasks (Upgrade to Premium)"
+              tabIndex={0}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-fb-border bg-gray-50/80 text-fb-text-muted text-xs font-medium cursor-not-allowed select-none opacity-80 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-fb-text-muted" aria-hidden="true" />
+              <span>Sort</span>
+              <Info className="w-3 h-3 text-fb-text-muted/70 shrink-0 ml-0.5" aria-hidden="true" />
+            </button>
+            <div
+              role="tooltip"
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 pointer-events-none px-2 py-1 text-[11px] font-medium text-white bg-gray-900 rounded-md shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 z-50"
+            >
+              Upgrade to Premium
+              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+            </div>
+          </div>
 
           <button
             type="button"
