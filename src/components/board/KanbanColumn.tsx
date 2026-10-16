@@ -1,12 +1,15 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Task, TaskStatus } from '../../domain/types';
 import { STATUS_COLOR_STYLES } from '../../domain/constants';
-import { TaskCard } from './TaskCard';
+import { SortableTaskCard } from './SortableTaskCard';
 
 export interface KanbanColumnProps {
   status: TaskStatus;
   tasks: Task[];
+  taskMutationInFlight?: boolean;
   onTaskClick: (task: Task) => void;
   onCreateTask: (statusId: string) => void;
   className?: string;
@@ -15,15 +18,26 @@ export interface KanbanColumnProps {
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   status,
   tasks,
+  taskMutationInFlight = false,
   onTaskClick,
   onCreateTask,
   className = '',
 }) => {
   const statusStyles = STATUS_COLOR_STYLES[status.color] || STATUS_COLOR_STYLES.gray;
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: status.id,
+    data: {
+      type: 'column',
+      statusId: status.id,
+    },
+  });
+
   return (
     <div
-      className={`flex flex-col min-w-[280px] sm:min-w-[310px] w-[320px] max-w-[340px] shrink-0 bg-[#F0F2F6] rounded-2xl p-3 max-h-full ${className}`}
+      className={`flex flex-col min-w-[280px] sm:min-w-[310px] w-[320px] max-w-[340px] shrink-0 bg-[#F0F2F6] rounded-2xl p-3 max-h-full transition-shadow ${
+        isOver ? 'ring-2 ring-fb-primary/40 bg-[#E8EDF5]' : ''
+      } ${className}`}
       data-status-id={status.id}
     >
       {/* Column Header */}
@@ -52,24 +66,42 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </button>
       </div>
 
-      {/* Task Card List */}
-      <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto min-h-[140px] pr-0.5">
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            onClick={() => onTaskClick(task)}
-          />
-        ))}
+      {/* Task Card List with SortableContext & Droppable */}
+      <SortableContext
+        id={status.id}
+        items={tasks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div
+          ref={setNodeRef}
+          className={`flex-1 flex flex-col gap-2.5 overflow-y-auto min-h-[140px] pr-0.5 rounded-xl transition-all ${
+            isOver ? 'bg-fb-primary-soft/30 p-1' : ''
+          }`}
+        >
+          {tasks.map((task) => (
+            <SortableTaskCard
+              key={task.id}
+              task={task}
+              disabled={taskMutationInFlight}
+              onClick={() => onTaskClick(task)}
+            />
+          ))}
 
-        {tasks.length === 0 && (
-          <div className="flex-1 flex items-center justify-center border-2 border-dashed border-gray-300/80 rounded-xl p-6 text-center text-xs text-fb-text-muted select-none">
-            No tasks in this column
-          </div>
-        )}
-      </div>
+          {tasks.length === 0 && (
+            <div
+              className={`flex-1 flex items-center justify-center border-2 border-dashed ${
+                isOver
+                  ? 'border-fb-primary bg-white/80 text-fb-primary font-medium'
+                  : 'border-gray-300/80 text-fb-text-muted'
+              } rounded-xl p-6 text-center text-xs select-none transition-colors`}
+            >
+              {isOver ? 'Drop task here' : 'No tasks in this column'}
+            </div>
+          )}
+        </div>
+      </SortableContext>
 
-      {/* Column bottom button: "+ Add task" matching Figma Screenshot 1 & 4 */}
+      {/* Column bottom button: "+ Add task" */}
       <div className="pt-2 mt-auto">
         <button
           type="button"

@@ -10,6 +10,9 @@ export interface TaskCardProps {
   task: Task;
   onClick?: () => void;
   className?: string;
+  isDragging?: boolean;
+  disabled?: boolean;
+  tabIndex?: number;
 }
 
 export function formatDueDate(dueDateStr: string | null): { text: string; isOverdue: boolean } | null {
@@ -31,7 +34,14 @@ export function formatDueDate(dueDateStr: string | null): { text: string; isOver
   return { text: formatted, isOverdue: diffDays < 0 };
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, className = '' }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({
+  task,
+  onClick,
+  className = '',
+  isDragging = false,
+  disabled = false,
+  tabIndex,
+}) => {
   const usersById = useAppStore((state) => state.usersById);
   const priorityConfig = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.none;
   const dueInfo = formatDueDate(task.dueDate);
@@ -40,19 +50,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, className = '
     .map((id) => usersById[id])
     .filter((u): u is User => Boolean(u));
 
+  const cursorClass = disabled
+    ? 'cursor-not-allowed opacity-60'
+    : isDragging
+    ? 'cursor-grabbing'
+    : 'cursor-grab active:cursor-grabbing';
+
+  const effectiveTabIndex = tabIndex !== undefined ? tabIndex : disabled ? -1 : 0;
+
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
+      role={tabIndex === -1 ? undefined : 'button'}
+      tabIndex={effectiveTabIndex}
+      onClick={disabled ? undefined : onClick}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           onClick?.();
         }
       }}
       aria-label={`Task ${task.id}: ${task.title}`}
-      className={`group relative bg-white rounded-xl border border-fb-border p-3.5 shadow-fb-card hover:shadow-md hover:border-gray-300 transition-all cursor-pointer select-none text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary ${className}`}
+      className={`group relative bg-white rounded-xl border border-fb-border p-3.5 shadow-fb-card hover:shadow-md hover:border-gray-300 transition-all select-none text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary ${cursorClass} ${className}`}
     >
       {/* Top row: Task ID + Priority indicator dot */}
       <div className="flex items-center justify-between gap-2 mb-1.5">
