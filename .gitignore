@@ -3,3 +3,10 @@ dist
 dist-ssr
 *.local
 .DS_Store
+# Private assignment / planning reference files
+docs/assignment.pdf
+docs/Figma Verification.md
+docs/Flowboard master spec.md
+
+# Private Figma reference screenshots
+docs/figma/
