@@ -25,13 +25,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
 
   // Neutral state: 404 Page Not Found
   if (routeState === 'not-found') {
-    return (
-      <nav aria-label="Breadcrumb" className={`flex items-center text-xs text-fb-text-muted ${className}`}>
-        <span className="font-semibold text-fb-text-secondary" aria-current="page">
-          Page not found
-        </span>
-      </nav>
-    );
+    return null;
   }
 
   // Neutral state: 403 Forbidden / Restricted (does not leak hierarchy)

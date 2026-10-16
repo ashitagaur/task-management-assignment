@@ -34,7 +34,9 @@ export const NotFoundCard: React.FC<NotFoundCardProps> = ({
         Sorry, we can&apos;t find that page.
       </h2>
       <p className="text-xs sm:text-sm text-fb-text-secondary max-w-md mx-auto mb-8 leading-relaxed">
-        The address you entered isn&apos;t a functioning page in Flowboard. It may be incorrect or the resource may no longer exist.
+        The address you entered isn&apos;t a functioning page in Flowboard.
+        <br />
+        It may be incorrect or the resource may no longer exist.
       </p>
 
       {/* Primary CTA */}
