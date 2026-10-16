@@ -4,16 +4,50 @@ import { sortTasksByDueDate, sortTasksByPriority } from '../domain/ordering';
 import { getPermissionContext, AppStoreState } from './store';
 
 /**
- * Returns all container nodes visible to the active user,
+ * Returns all container nodes visible to the active user in canonical hierarchy order
+ * (depth-first pre-order traversal with siblings sorted ascending by position),
  * structurally filtered by permissions and excluding archived nodes.
  */
 export function getFilteredTree(state: AppStoreState): ContainerNode[] {
   const context = getPermissionContext(state);
+  const containers = Object.values(state.containersById);
 
-  return Object.values(state.containersById).filter((node) => {
-    if (node.archived) return false;
-    return canViewNode(state.activeUserId, node.id, context);
-  });
+  // Group children by parentId
+  const childrenByParent = new Map<string | null, ContainerNode[]>();
+  for (const node of containers) {
+    if (node.archived) continue;
+    const list = childrenByParent.get(node.parentId) || [];
+    list.push(node);
+    childrenByParent.set(node.parentId, list);
+  }
+
+  // Sort sibling nodes by position, tie-breaking by id
+  for (const list of childrenByParent.values()) {
+    list.sort((a, b) => {
+      if (a.position !== b.position) return a.position - b.position;
+      return a.id.localeCompare(b.id);
+    });
+  }
+
+  // Depth-first canonical traversal from root nodes
+  const result: ContainerNode[] = [];
+  const visited = new Set<string>();
+
+  function traverse(parentId: string | null) {
+    const children = childrenByParent.get(parentId) || [];
+    for (const child of children) {
+      if (visited.has(child.id)) continue;
+      visited.add(child.id);
+
+      if (canViewNode(state.activeUserId, child.id, context)) {
+        result.push(child);
+        traverse(child.id);
+      }
+    }
+  }
+
+  traverse(null);
+  return result;
 }
 
 /**

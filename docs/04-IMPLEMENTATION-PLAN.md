@@ -423,7 +423,7 @@ If corrections are requested: correct → verify again → report again → sugg
 
 **Relevant References**: `docs/01-REQUIREMENTS.md` (V-10, V-11, P-02, P-11, P-15, U-03, U-10, U-12, D-05), `docs/02-ARCHITECTURE.md` §5.3 (Routing & Access Guards), §6 (Responsive Strategy)
 
-**Static Figma References**: Screenshots 1, 3, 4 (topbar, user switcher, breadcrumbs, simulation toggle)
+**Static Figma References**: Screenshots 1, 3, 4 (topbar, user switcher, breadcrumbs)
 
 **Scope**:
 - `src/components/app/App.tsx`: Root component
@@ -437,9 +437,8 @@ If corrections are requested: correct → verify again → report again → sugg
 - `src/components/app/Topbar.tsx`:
   - Flowboard branding/logo
   - Search input (visual only, non-functional)
-  - "Simulation: Normal" / "Simulation: Armed" toggle pill
   - User switcher dropdown (Alice/Bob/Carol with role labels)
-  - "Viewing as \<User\> · \<Role\>" indicator
+  - "Viewing as <User> · <Role>" indicator
   - Disabled state when `taskMutationInFlight` is true (user switcher only)
   - Responsive: compact on tablet/mobile
 - `src/components/app/WorkspaceHeader.tsx`:
@@ -474,10 +473,9 @@ If corrections are requested: correct → verify again → report again → sugg
 3. Default route redirects to first visible list
 4. User switcher changes `activeUserId` and immediately updates displayed user
 5. Route reconciliation redirects to first visible list when current list becomes inaccessible after user switch
-6. "Viewing as \<User\> · \<Role\>" banner visible
-7. Simulation toggle toggles `simulateFailureNext`
-8. Responsive: sidebar area collapses below 1024px
-9. `tsc --noEmit` passes
+6. "Viewing as <User> · <Role>" banner visible
+7. Responsive: sidebar area collapses below 1024px
+8. `tsc --noEmit` passes
 
 **Verification Plan**: `npm run dev`. Switch users and verify route/tree updates. Resize browser to verify responsive behavior.
 
