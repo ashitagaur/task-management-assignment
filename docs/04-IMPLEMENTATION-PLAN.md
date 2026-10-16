@@ -284,7 +284,8 @@ If corrections are requested: correct → verify again → report again → sugg
 **Scope**:
 - `src/store/store.ts`: Zustand store definition
   - **Canonical state**: `containersById`, `statusesById`, `usersById`, `grants`, `nextTaskNumber`, `activityByTaskId` — initialized from fixtures
-  - **Session state**: `activeUserId` (default: Alice), `viewMode` ('board'), `simulateFailureNext` (false), `taskMutationInFlight` (false)
+  - **Session state**: `activeUserId` (initialized from `sessionStorage` via `flowboard.activeUserId`, validated against fixtures, default: Alice), `viewMode` ('board'), `simulateFailureNext` (false), `taskMutationInFlight` (false)
+  - **Persistence Architecture**: In-memory canonical domain store (tasks, containers, statuses, grants) reset from deterministic fixtures on reload. Only `activeUserId` is persisted to `sessionStorage` so refresh preserves current user perspective, while active list remains strictly URL-driven via `#/list/:listId`.
   - **Container mutations** (all return `AppResult`):
     - `createContainer(parentId, name, type)` — validates parentage via `VALID_PARENT_TYPES`, admin-only via `canManageContainers`
     - `createList(parentId, name)` — atomic: creates container + 3 default statuses in one operation
@@ -292,10 +293,10 @@ If corrections are requested: correct → verify again → report again → sugg
     - `archiveContainer(id)` — admin-only, sets `archived: true`
     - `moveContainerUp(id)` / `moveContainerDown(id)` — admin-only, swaps positions + `reindexPositions`
   - **Session mutations**:
-    - `setActiveUser(userId)` — returns `INVARIANT_VIOLATION` if `taskMutationInFlight` is true
+    - `setActiveUser(userId)` — validates user, persists to `sessionStorage`, returns `INVARIANT_VIOLATION` if `taskMutationInFlight` is true
     - `setViewMode(mode)`
     - `toggleSimulateFailure()`
-    - `resetData()` — reinitializes from fixtures
+    - `resetData()` — reinitializes from fixtures and resets `sessionStorage` to Alice
   - **`tasksById`**: initialized from fixtures (mutations added in T05)
 
 **Likely Files/Modules**:
@@ -863,7 +864,7 @@ If corrections are requested: correct → verify again → report again → sugg
 8. `// DND-EXCEPTION` comments present on all inline style attributes
 9. `tsc --noEmit` passes
 
-**Verification Plan**: `npm run dev`. Drag cards within and between columns. Verify positions persist on page reload (re-seed). Test touch drag on mobile. Inspect console for store mutation count.
+**Verification Plan**: `npm run dev`. Drag cards within and between columns. Verify positions persist in store across view switches (Board ↔ List), while canonical state resets from fixtures on full page reload. Test touch drag on mobile. Inspect console for store mutation count.
 
 **Testing Required**: Manual DnD testing. Automated DnD testing deferred (complex to automate reliably).
 

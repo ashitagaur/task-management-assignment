@@ -101,6 +101,14 @@ graph TD
    - A `taskMutationInFlight` concurrency lock guards all task mutations against overlapping or race conditions.
 5. **Strict Design Token Fidelity**:
    - The UI adheres strictly to Tailwind CSS extended with `fb-*` design tokens extracted from static Figma materials (colors, typography, radii, shadows). Zero ad-hoc custom CSS files are used.
+6. **Persistence Choice & Refresh Invariants**:
+   - **Persistence choice**: Flowboard intentionally keeps canonical domain data in memory and restores deterministic fixtures on reload. The assignment permits optional localStorage persistence, but we chose not to persist the mock domain store to avoid stale or schema-sensitive evaluator state. Only the active user perspective is retained in `sessionStorage` (`flowboard.activeUserId`) so refreshes preserve permission context, while the active List remains URL-driven via `#/list/:listId`.
+   - **Deterministic Refresh Behavior**:
+     - *Bob + Backlog* → refresh ⇒ Bob + Backlog
+     - *Carol + Marketing (`list-growth`)* → refresh ⇒ Carol + Marketing
+     - *Alice + Sprint 18* → refresh ⇒ Alice + Sprint 18
+     - *Bob + forbidden Sprint 18 (`#/list/list-sprint-18`)* → refresh ⇒ Bob remains Bob and 403 Restricted Card remains visible (never resets to Alice or redirects).
+   - **Multi-Tab Evaluation**: Because `sessionStorage` is scoped per tab, evaluators can open multiple tabs side-by-side (e.g., Tab 1 as Alice Admin, Tab 2 as Bob Member) to compare trees and permissions simultaneously without cross-tab session collision.
 
 ---
 

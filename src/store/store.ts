@@ -39,6 +39,7 @@ import {
   INITIAL_TASKS,
   INITIAL_USERS,
 } from './fixtures';
+import { getStoredActiveUserId, setStoredActiveUserId } from './session';
 
 export interface CreateTaskInput {
   title: string;
@@ -149,7 +150,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   activityByTaskId: { ...INITIAL_ACTIVITY },
 
   // Initial Session State
-  activeUserId: 'user-alice',
+  activeUserId: getStoredActiveUserId(),
   viewMode: 'board',
   simulateFailureNext: false,
   taskMutationInFlight: false,
@@ -906,6 +907,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       return failure('NOT_FOUND', `User ${userId} not found`);
     }
 
+    setStoredActiveUserId(userId);
     set({ activeUserId: userId });
     return success(undefined);
   },
@@ -921,7 +923,8 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   setTaskMutationInFlight: (inFlight) => set({ taskMutationInFlight: inFlight }),
 
   // Reset to initial fixtures
-  resetData: () =>
+  resetData: () => {
+    setStoredActiveUserId('user-alice');
     set({
       containersById: { ...INITIAL_CONTAINERS },
       tasksById: { ...INITIAL_TASKS },
@@ -934,5 +937,6 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       viewMode: 'board',
       simulateFailureNext: false,
       taskMutationInFlight: false,
-    }),
+    });
+  },
 }));

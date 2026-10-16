@@ -185,8 +185,12 @@ These low-risk helper tests may be added if meaningful time remains:
 | Switch to Alice | Full tree visible, all tasks editable, container menus visible |
 | Switch to Bob | Engineering/Q2 Launch/Backlog visible; Sprint 18 hidden; Marketing hidden; no container menus |
 | Switch to Carol | All containers visible including Marketing; no container menus |
-| Navigate to forbidden list as Bob | 403 Restricted Card with explanation |
-| Switch user while on forbidden list | Auto-redirect to first visible list + toast |
+| Navigate to forbidden list as Bob | 403 Restricted Card with explanation (URL preserved) |
+| Switch user while on forbidden/invalid list | Auto-reconcile to first visible list + subtle toast |
+| Bob on Backlog & refresh | Bob perspective and Backlog URL preserved |
+| Carol on Marketing & refresh | Carol perspective and Growth Campaigns URL preserved |
+| Bob on forbidden Sprint 18 & refresh | Bob perspective, Sprint 18 URL, and 403 Restricted Card preserved (no fallback to Alice) |
+| Corrupted sessionStorage & refresh | Safe fallback to Alice without crashing |
 
 ### DnD (Critical)
 

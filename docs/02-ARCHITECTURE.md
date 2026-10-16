@@ -355,7 +355,7 @@ Static Tailwind class maps. No runtime hex. No dynamic class generation.
 **Decision: `key={activeUserId}` on content container**
 - Why: Cleanly resets all transient UI state (drawer drafts, bulk selection, sidebar expansion) on user switch
 - Trade-off: Brief re-mount; acceptable for 3-user switching scenario
-- Note: Does NOT replace explicit route reconciliation — if active list is denied, must redirect
+- Note: Does NOT replace explicit route reconciliation — user switch to an inaccessible list auto-reconciles to the first accessible list, while direct forbidden access preserves the URL and renders 403
 
 **Decision: Single `taskMutationInFlight` boolean lock**
 - Why: Prevents concurrent mutations from corrupting position state (especially during ~300ms optimistic rollback delay)
@@ -366,6 +366,23 @@ Static Tailwind class maps. No runtime hex. No dynamic class generation.
 - Why: Forces callers to handle errors; no thrown exceptions to catch; TypeScript narrows `data` vs `error`
 - Trade-off: Slightly more verbose call sites
 - Alternative rejected: Thrown errors (easy to forget `try/catch`, lose type safety)
+
+**Decision: In-memory canonical domain store + sessionStorage for active user identity**
+- Why: The assignment states *"There is no backend. Use a typed client store seeded from fixtures. Optional localStorage persistence is fine — document your choice."* We deliberately chose in-memory canonical domain state (tasks, containers, statuses, grants) reset from deterministic fixtures on reload, paired with `sessionStorage` (`flowboard.activeUserId`) for active user identity.
+- Rationale:
+  1. The assignment makes localStorage optional, not required.
+  2. Domain persistence in localStorage would create stale, polluted evaluator state across testing sessions (requiring manual storage clears after deleting or editing entities).
+  3. Deterministic fixtures make review and re-testing predictable and reproducible.
+  4. `sessionStorage` preserves refresh state without persisting identity indefinitely across browser sessions.
+  5. Multi-tab evaluation: separate browser tabs maintain independent user perspectives (e.g. Tab 1 as Alice Admin, Tab 2 as Bob Member) for side-by-side permission comparison without cross-tab storage collisions.
+- Preserved Invariants on Reload:
+  - Active list remains driven ONLY by the hash route: `#/list/:listId`.
+  - Active user perspective is read from `sessionStorage`. If missing or invalid, it safely falls back to Alice (`user-alice`).
+  - Refresh behaviors verified:
+    - Bob + Backlog → refresh ⇒ Bob + Backlog
+    - Carol + Marketing (`list-growth`) → refresh ⇒ Carol + Marketing
+    - Alice + Sprint 18 → refresh ⇒ Alice + Sprint 18
+    - Bob + direct forbidden Sprint 18 (`#/list/list-sprint-18`) → refresh ⇒ Bob remains Bob, URL remains Sprint 18, and 403 Restricted Card remains visible (never silently becomes Alice).
 
 ---
 
