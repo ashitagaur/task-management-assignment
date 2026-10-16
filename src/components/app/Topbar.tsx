@@ -3,6 +3,7 @@ import { Menu, Search } from 'lucide-react';
 import { Breadcrumbs } from './Breadcrumbs';
 import { UserSwitcher } from './UserSwitcher';
 import { RouteState } from '../../hooks/useActiveList';
+import { useAppStore } from '../../store/store';
 
 export interface TopbarProps {
   activeListId: string | null;
@@ -17,6 +18,10 @@ export const Topbar: React.FC<TopbarProps> = ({
   onNavigate,
   onToggleMobileSidebar,
 }) => {
+  const simulateFailureNext = useAppStore((state) => state.simulateFailureNext);
+  const toggleSimulateFailure = useAppStore((state) => state.toggleSimulateFailure);
+  const taskMutationInFlight = useAppStore((state) => state.taskMutationInFlight);
+
   return (
     <header className="h-16 min-h-[64px] bg-white border-b border-fb-border px-4 lg:px-6 flex items-center justify-between gap-3 z-20 shrink-0 w-full max-w-full min-w-0">
       {/* Left: Mobile menu toggle + Breadcrumbs */}
@@ -57,14 +62,32 @@ export const Topbar: React.FC<TopbarProps> = ({
           />
         </div>
 
-        {/* Simulation mode indicator matching Figma Frame 1:3 & 1:38 */}
-        <div
-          className="hidden sm:flex items-center gap-1.5 h-[38px] px-3 rounded-lg border border-amber-200/80 bg-amber-50/60 text-xs text-amber-900 select-none cursor-default font-medium"
-          title="Simulation mode (configured in T13)"
+        {/* Interactive simulation toggle matching Figma Frame 1:3 & 1:38 */}
+        <button
+          type="button"
+          onClick={toggleSimulateFailure}
+          disabled={taskMutationInFlight}
+          aria-pressed={simulateFailureNext}
+          aria-label="Toggle mutation failure simulation"
+          title={
+            simulateFailureNext
+              ? 'Simulation armed: next task mutation will fail and rollback (click to disarm)'
+              : 'Simulation normal: mutations commit normally (click to arm failure)'
+          }
+          className={`hidden sm:flex items-center gap-1.5 h-[38px] px-3 rounded-lg border text-xs font-medium transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary ${
+            simulateFailureNext
+              ? 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100'
+              : 'border-amber-200/80 bg-amber-50/60 text-amber-900 hover:bg-amber-100/80'
+          } ${taskMutationInFlight ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
-          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
-          <span>Simulation: Normal</span>
-        </div>
+          <span
+            className={`w-2 h-2 rounded-full shrink-0 ${
+              simulateFailureNext ? 'bg-red-500 animate-pulse' : 'bg-amber-500'
+            }`}
+            aria-hidden="true"
+          />
+          <span>{simulateFailureNext ? 'Simulation: Armed' : 'Simulation: Normal'}</span>
+        </button>
 
         {/* User Switcher */}
         <UserSwitcher />

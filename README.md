@@ -236,9 +236,30 @@ The application will be available at `http://localhost:5173`.
 # Run TypeScript typecheck
 npm run typecheck # or: tsc --noEmit
 
-# Run automated tests
+# Run automated tests (4 test suites, 43 tests)
 npm test
 
 # Build production bundle
 npm run build
 ```
+
+---
+
+## AI Usage & Pair Programming
+
+Development of Flowboard utilized AI assistance (Antigravity IDE) for requirements synthesis, TDD state machine authoring, RTL component testing, and edge case audits. Full prompt logs, architecture trade-offs, and verification workflows are documented in [**`AI_USAGE.md`**](AI_USAGE.md) per requirement `DO-06`.
+
+---
+
+## Engineering Notes & Architectural Invariants
+
+1. **DnD Inline Style Exception (`DO-07`)**:
+   - The UI adheres 100% to Tailwind CSS tokens. The sole exception is `@dnd-kit DragOverlay` in [KanbanBoard.tsx](src/components/board/KanbanBoard.tsx), where dynamic `style={{ transform, cursor }}` is mandatory for cursor tracking and elevation (`DND-EXCEPTION`).
+2. **Core MVP vs. Stretch Scope (`DO-09`)**:
+   - Basic Kanban drag-and-drop within and across status columns was delivered as a **core MVP requirement**, not a stretch goal.
+   - The two elective stretch goals completed in Phase 5 are:
+     1. **Stretch A**: *Optimistic DnD with Scoped Rollback* (transaction snapshots, topbar "Simulate Failure" toggle, and field-scoped rollback).
+     2. **Stretch B**: *Bulk Update in Dense List View* (multi-select row checkboxes, indeterminate header checkbox, floating action dock for status change and additive assignees).
+3. **Future Architectural Iterations (`DO-08`)**:
+   - In production evolutions, the permission engine can naturally expand from hierarchical parent inheritance to **nearest-grant precedence**, dedicated **Teams/Groups**, fine-grained **custom roles**, and **real-time WebSocket collaborative sync**.
+

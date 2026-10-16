@@ -145,3 +145,11 @@ export interface TaskMoveTransactionSnapshot {
   sourceSiblingPositionsBefore: PositionSnapshot[];
   destinationSiblingPositionsBefore: PositionSnapshot[];
 }
+
+export interface BulkUpdateTasksInput {
+  taskIds: string[];
+  listId: string;
+  statusId?: string;
+  addAssigneeIds?: string[];
+}
+

@@ -10,6 +10,8 @@ import { formatDueDate } from '../board/TaskCard';
 export interface ListRowProps {
   task: Task;
   status?: TaskStatus;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
   onClick: () => void;
   className?: string;
 }
@@ -17,6 +19,8 @@ export interface ListRowProps {
 export const ListRow: React.FC<ListRowProps> = ({
   task,
   status,
+  isSelected = false,
+  onToggleSelect,
   onClick,
   className = '',
 }) => {
@@ -39,8 +43,25 @@ export const ListRow: React.FC<ListRowProps> = ({
         }
       }}
       aria-label={`Task ${task.id}: ${task.title}`}
-      className={`group border-b border-fb-border last:border-b-0 hover:bg-gray-50/80 transition-colors cursor-pointer select-none focus-visible:outline-none focus-visible:bg-gray-50 ${className}`}
+      className={`group border-b border-fb-border last:border-b-0 transition-colors cursor-pointer select-none focus-visible:outline-none focus-visible:bg-gray-50 ${
+        isSelected
+          ? 'bg-fb-primary-soft/40 hover:bg-fb-primary-soft/50'
+          : 'hover:bg-gray-50/80'
+      } ${className}`}
     >
+      {/* 0. SELECT CHECKBOX */}
+      <td
+        className="py-3 pl-4 pr-1 w-10 shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelect?.()}
+          aria-label={`Select task ${task.id}`}
+          className="w-4 h-4 rounded border-fb-border text-fb-primary focus:ring-fb-primary cursor-pointer accent-fb-primary"
+        />
+      </td>
       {/* 1. TASK: ID + Title */}
       <td className="py-3 px-4 min-w-[260px] max-w-md">
         <div className="flex flex-col text-left">

@@ -79,7 +79,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setActiveTaskId(String(event.active.id));
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTaskId(null);
 
@@ -152,21 +152,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     // Single store mutation on drop (zero store writes on drag-over)
     if (sourceStatusId === targetStatusId) {
-      const result = reorderTask(activeId, targetPosition);
+      const result = await reorderTask(activeId, targetPosition);
       if (!result.success && toastContext) {
         toastContext.showToast({
           type: 'error',
-          title: 'Cannot reorder task',
-          body: result.error.message,
+          title: "Couldn't move task",
+          body: result.error.message || 'Changes were reverted safely.',
         });
       }
     } else {
-      const result = moveTaskStatus(activeId, targetStatusId, targetPosition);
+      const result = await moveTaskStatus(activeId, targetStatusId, targetPosition);
       if (!result.success && toastContext) {
         toastContext.showToast({
           type: 'error',
-          title: 'Cannot move task',
-          body: result.error.message,
+          title: "Couldn't move task",
+          body: result.error.message || 'Changes were reverted safely.',
         });
       }
     }

@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import {
   AppResult,
+  BulkUpdateTasksInput,
   ContainerNode,
   ContainerType,
   Grant,
   PermissionContext,
+  PositionSnapshot,
   StaticActivityEntry,
   Task,
+  TaskMoveTransactionSnapshot,
   TaskPriority,
   TaskStatus,
   User,
@@ -92,14 +95,20 @@ export interface AppStoreState {
   moveTaskStatus: (
     taskId: string,
     newStatusId: string,
-    newPosition: number
-  ) => AppResult<Task>;
+    newPosition: number,
+    rollbackDelayMs?: number
+  ) => Promise<AppResult<Task>>;
   moveTaskToList: (
     taskId: string,
     destListId: string,
     targetStatusId?: string
   ) => AppResult<Task>;
-  reorderTask: (taskId: string, newPosition: number) => AppResult<Task>;
+  reorderTask: (
+    taskId: string,
+    newPosition: number,
+    rollbackDelayMs?: number
+  ) => Promise<AppResult<Task>>;
+  bulkUpdateTasks: (input: BulkUpdateTasksInput) => AppResult<Task[]>;
 
   // Session Mutations
   setActiveUser: (userId: string) => AppResult<void>;
@@ -670,8 +679,8 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     return success(task);
   },
 
-  // 10. Move Task Status (Same list or Kanban column drop)
-  moveTaskStatus: (taskId, newStatusId, newPosition) => {
+  // 10. Move Task Status (Same list or Kanban column drop with Optimistic UI & Transaction Rollback)
+  moveTaskStatus: async (taskId, newStatusId, newPosition, rollbackDelayMs = 300) => {
     const state = get();
     if (state.taskMutationInFlight) {
       return failure(
@@ -704,86 +713,174 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       );
     }
 
-    const now = new Date().toISOString();
+    // 1. Acquire concurrency lock
+    set({ taskMutationInFlight: true });
+
+    // 2. Capture Transaction Snapshot before any optimistic mutation
     const oldStatusId = task.statusId;
+    const isSameColumn = oldStatusId === newStatusId;
 
-    if (oldStatusId === newStatusId) {
-      // Reorder within same status column
-      const columnTasks = Object.values(state.tasksById)
-        .filter(
-          (t) =>
-            t.primaryListId === task.primaryListId &&
-            t.statusId === oldStatusId
-        )
-        .sort((a, b) => a.position - b.position);
+    const sourceSiblingsBefore: PositionSnapshot[] = Object.values(state.tasksById)
+      .filter((t) => t.primaryListId === task.primaryListId && t.statusId === oldStatusId && t.id !== task.id)
+      .map((t) => ({ taskId: t.id, position: t.position }));
 
-      const filtered = columnTasks.filter((t) => t.id !== task.id);
-      const clampedPosition = Math.max(
-        0,
-        Math.min(newPosition, filtered.length)
-      );
-      filtered.splice(clampedPosition, 0, { ...task, updatedAt: now });
+    const destinationSiblingsBefore: PositionSnapshot[] = !isSameColumn
+      ? Object.values(state.tasksById)
+          .filter((t) => t.primaryListId === task.primaryListId && t.statusId === newStatusId)
+          .map((t) => ({ taskId: t.id, position: t.position }))
+      : [];
 
-      const reindexed = reindexPositions(filtered);
-      const updatedMap = { ...state.tasksById };
-      for (const t of reindexed) {
-        const tEntry = getTaskEntry(updatedMap, t.id);
-        if (tEntry) {
-          updatedMap[tEntry.key] = t;
+    const snapshot: TaskMoveTransactionSnapshot = {
+      movedTaskId: task.id,
+      movedTaskStatusBefore: oldStatusId,
+      movedTaskPositionBefore: task.position,
+      movedTaskUpdatedAtBefore: task.updatedAt,
+      sourceSiblingPositionsBefore: sourceSiblingsBefore,
+      destinationSiblingPositionsBefore: destinationSiblingsBefore,
+    };
+
+    const now = new Date().toISOString();
+
+    try {
+      // 3. Optimistically compute and apply new positions to store
+      let updatedTasksMap: Record<string, Task>;
+
+      if (isSameColumn) {
+        // Reorder within same status column
+        const columnTasks = Object.values(state.tasksById)
+          .filter(
+            (t) =>
+              t.primaryListId === task.primaryListId &&
+              t.statusId === oldStatusId
+          )
+          .sort((a, b) => a.position - b.position);
+
+        const filtered = columnTasks.filter((t) => t.id !== task.id);
+        const clampedPosition = Math.max(
+          0,
+          Math.min(newPosition, filtered.length)
+        );
+        filtered.splice(clampedPosition, 0, { ...task, updatedAt: now });
+
+        const reindexed = reindexPositions(filtered);
+        updatedTasksMap = { ...state.tasksById };
+        for (const t of reindexed) {
+          const tEntry = getTaskEntry(updatedTasksMap, t.id);
+          if (tEntry) {
+            updatedTasksMap[tEntry.key] = t;
+          }
+        }
+      } else {
+        // Cross-status move within same list
+        const oldColumnTasks = Object.values(state.tasksById)
+          .filter(
+            (t) =>
+              t.id !== task.id &&
+              t.primaryListId === task.primaryListId &&
+              t.statusId === oldStatusId
+          )
+          .sort((a, b) => a.position - b.position);
+        const reindexedOld = reindexPositions(oldColumnTasks);
+
+        const newColumnTasks = Object.values(state.tasksById)
+          .filter(
+            (t) =>
+              t.id !== task.id &&
+              t.primaryListId === task.primaryListId &&
+              t.statusId === newStatusId
+          )
+          .sort((a, b) => a.position - b.position);
+
+        const clampedPos = Math.max(
+          0,
+          Math.min(newPosition, newColumnTasks.length)
+        );
+        newColumnTasks.splice(clampedPos, 0, {
+          ...task,
+          statusId: newStatusId,
+          updatedAt: now,
+        });
+        const reindexedNew = reindexPositions(newColumnTasks);
+
+        updatedTasksMap = { ...state.tasksById };
+        for (const t of reindexedOld) {
+          const tEntry = getTaskEntry(updatedTasksMap, t.id);
+          if (tEntry) {
+            updatedTasksMap[tEntry.key] = t;
+          }
+        }
+        for (const t of reindexedNew) {
+          const tEntry = getTaskEntry(updatedTasksMap, t.id);
+          if (tEntry) {
+            updatedTasksMap[tEntry.key] = t;
+          }
         }
       }
 
-      set({ tasksById: updatedMap });
-      return success(updatedMap[entry.key]!);
-    }
+      // Optimistic commit: UI reflects moved task immediately
+      set({ tasksById: updatedTasksMap });
 
-    // Cross-status move within same list
-    const oldColumnTasks = Object.values(state.tasksById)
-      .filter(
-        (t) =>
-          t.id !== task.id &&
-          t.primaryListId === task.primaryListId &&
-          t.statusId === oldStatusId
-      )
-      .sort((a, b) => a.position - b.position);
-    const reindexedOld = reindexPositions(oldColumnTasks);
+      // 4. Check if simulation is armed
+      if (state.simulateFailureNext) {
+        // Clear flag immediately (single-shot)
+        set({ simulateFailureNext: false });
 
-    const newColumnTasks = Object.values(state.tasksById)
-      .filter(
-        (t) =>
-          t.id !== task.id &&
-          t.primaryListId === task.primaryListId &&
-          t.statusId === newStatusId
-      )
-      .sort((a, b) => a.position - b.position);
+        // Hold optimistic state briefly for observability while lock is held
+        if (rollbackDelayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, rollbackDelayMs));
+        }
 
-    const clampedPos = Math.max(
-      0,
-      Math.min(newPosition, newColumnTasks.length)
-    );
-    newColumnTasks.splice(clampedPos, 0, {
-      ...task,
-      statusId: newStatusId,
-      updatedAt: now,
-    });
-    const reindexedNew = reindexPositions(newColumnTasks);
+        // 5. Deterministic Field-Scoped Rollback:
+        // Restore ONLY captured fields: statusId, position, updatedAt, sibling positions
+        const currentState = get();
+        const rollbackTasksMap = { ...currentState.tasksById };
 
-    const updatedTasksMap = { ...state.tasksById };
-    for (const t of reindexedOld) {
-      const tEntry = getTaskEntry(updatedTasksMap, t.id);
-      if (tEntry) {
-        updatedTasksMap[tEntry.key] = t;
+        // Restore moved task
+        const movedEntry = getTaskEntry(rollbackTasksMap, snapshot.movedTaskId);
+        if (movedEntry) {
+          rollbackTasksMap[movedEntry.key] = {
+            ...movedEntry.task,
+            statusId: snapshot.movedTaskStatusBefore,
+            position: snapshot.movedTaskPositionBefore,
+            updatedAt: snapshot.movedTaskUpdatedAtBefore,
+          };
+        }
+
+        // Restore source siblings
+        for (const sibling of snapshot.sourceSiblingPositionsBefore) {
+          const sEntry = getTaskEntry(rollbackTasksMap, sibling.taskId);
+          if (sEntry) {
+            rollbackTasksMap[sEntry.key] = {
+              ...sEntry.task,
+              position: sibling.position,
+            };
+          }
+        }
+
+        // Restore destination siblings
+        for (const sibling of snapshot.destinationSiblingPositionsBefore) {
+          const dEntry = getTaskEntry(rollbackTasksMap, sibling.taskId);
+          if (dEntry) {
+            rollbackTasksMap[dEntry.key] = {
+              ...dEntry.task,
+              position: sibling.position,
+            };
+          }
+        }
+
+        set({ tasksById: rollbackTasksMap });
+
+        return failure(
+          'SIMULATED_FAILURE',
+          'Changes were reverted safely.'
+        );
       }
-    }
-    for (const t of reindexedNew) {
-      const tEntry = getTaskEntry(updatedTasksMap, t.id);
-      if (tEntry) {
-        updatedTasksMap[tEntry.key] = t;
-      }
-    }
 
-    set({ tasksById: updatedTasksMap });
-    return success(updatedTasksMap[entry.key]!);
+      return success(updatedTasksMap[entry.key]!);
+    } finally {
+      // 6. Guarantee concurrency lock is released
+      set({ taskMutationInFlight: false });
+    }
   },
 
   // 11. Move Task To Different List
@@ -886,11 +983,153 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     return success(movedTask);
   },
 
-  // 12. Reorder Task (Same status column, contiguous 0..n-1)
-  reorderTask: (taskId, newPosition) => {
+  // 12. Reorder Task (Same status column, contiguous 0..n-1 with optimistic DnD)
+  reorderTask: async (taskId, newPosition, rollbackDelayMs = 300) => {
     const entry = getTaskEntry(get().tasksById, taskId);
     if (!entry) return failure('NOT_FOUND', `Task ${taskId} not found`);
-    return get().moveTaskStatus(entry.key, entry.task.statusId, newPosition);
+    return get().moveTaskStatus(entry.key, entry.task.statusId, newPosition, rollbackDelayMs);
+  },
+
+  // 13. Bulk Update Tasks (Dense List Multi-Select with all-or-nothing preflight validation)
+  bulkUpdateTasks: (input) => {
+    const state = get();
+    if (state.taskMutationInFlight) {
+      return failure(
+        'MUTATION_IN_FLIGHT',
+        'Another task mutation is currently in flight'
+      );
+    }
+
+    if (!input.taskIds || input.taskIds.length === 0) {
+      return failure('VALIDATION_ERROR', 'No tasks selected for bulk update');
+    }
+
+    const context = getPermissionContext(state);
+
+    // 1. Permission Check: task.update capability on active list
+    if (!can(state.activeUserId, 'task.update', input.listId, context)) {
+      return failure(
+        'FORBIDDEN',
+        'You do not have permission to update tasks on this list'
+      );
+    }
+
+    // 2. Target status validation (if changing status)
+    if (input.statusId) {
+      const targetStatus = state.statusesById[input.statusId];
+      if (!targetStatus || targetStatus.listId !== input.listId) {
+        return failure(
+          'VALIDATION_ERROR',
+          `Status ${input.statusId} does not belong to list ${input.listId}`
+        );
+      }
+    }
+
+    // 3. Target assignee validation (if adding assignees)
+    if (input.addAssigneeIds && input.addAssigneeIds.length > 0) {
+      for (const uid of input.addAssigneeIds) {
+        if (!state.usersById[uid]) {
+          return failure('NOT_FOUND', `User ${uid} not found`);
+        }
+      }
+    }
+
+    // 4. Preflight Task Verification (All-or-nothing): every task must exist and belong to input.listId
+    const tasksToUpdate: { key: string; task: Task }[] = [];
+    for (const tid of input.taskIds) {
+      const entry = getTaskEntry(state.tasksById, tid);
+      if (!entry) {
+        return failure('NOT_FOUND', `Task ${tid} not found`);
+      }
+      if (entry.task.primaryListId !== input.listId) {
+        return failure(
+          'VALIDATION_ERROR',
+          `Task ${tid} does not belong to list ${input.listId}`
+        );
+      }
+      tasksToUpdate.push(entry);
+    }
+
+    // 5. Check simulate failure (disarms single-shot flag, mutates zero tasks)
+    if (state.simulateFailureNext) {
+      set({ simulateFailureNext: false });
+      return failure(
+        'SIMULATED_FAILURE',
+        'Simulated bulk update failure'
+      );
+    }
+
+    // 6. Atomic Commit:
+    const now = new Date().toISOString();
+    const updatedTasksMap = { ...state.tasksById };
+    const affectedStatusIds = new Set<string>();
+    const resultTasks: Task[] = [];
+
+    // If changing status, find existing tasks in target status column that are NOT being bulk-moved
+    let currentDestColumnTasks: Task[] = [];
+    if (input.statusId) {
+      affectedStatusIds.add(input.statusId);
+      currentDestColumnTasks = Object.values(state.tasksById)
+        .filter(
+          (t) =>
+            t.primaryListId === input.listId &&
+            t.statusId === input.statusId &&
+            !input.taskIds.includes(t.id)
+        )
+        .sort((a, b) => a.position - b.position);
+    }
+
+    for (let i = 0; i < tasksToUpdate.length; i++) {
+      const { key, task } = tasksToUpdate[i]!;
+      const oldStatusId = task.statusId;
+      affectedStatusIds.add(oldStatusId);
+
+      let newStatusId = task.statusId;
+      let newPosition = task.position;
+
+      if (input.statusId) {
+        newStatusId = input.statusId;
+        newPosition = currentDestColumnTasks.length + i;
+      }
+
+      let newAssignees = task.assigneeIds;
+      if (input.addAssigneeIds && input.addAssigneeIds.length > 0) {
+        // Additive assignees: merge with existing, deduplicate, never replace
+        newAssignees = Array.from(
+          new Set([...task.assigneeIds, ...input.addAssigneeIds])
+        );
+      }
+
+      const updatedTask: Task = {
+        ...task,
+        statusId: newStatusId,
+        position: newPosition,
+        assigneeIds: newAssignees,
+        updatedAt: now,
+      };
+
+      updatedTasksMap[key] = updatedTask;
+      resultTasks.push(updatedTask);
+    }
+
+    // Contiguously reindex all affected columns (0..n-1)
+    for (const statusId of affectedStatusIds) {
+      const colTasks = Object.values(updatedTasksMap)
+        .filter(
+          (t) => t.primaryListId === input.listId && t.statusId === statusId
+        )
+        .sort((a, b) => a.position - b.position);
+      const reindexed = reindexPositions(colTasks);
+      for (const t of reindexed) {
+        const entry = getTaskEntry(updatedTasksMap, t.id);
+        if (entry) {
+          updatedTasksMap[entry.key] = t;
+        }
+      }
+    }
+
+    set({ tasksById: updatedTasksMap });
+    return success(resultTasks);
   },
 
   // Session: Set Active User
