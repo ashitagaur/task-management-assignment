@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Lock } from 'lucide-react';
-import { useAppStore } from '../../store/store';
 import { ActiveListRoute } from '../../hooks/useActiveList';
 import { Topbar } from './Topbar';
 import { WorkspaceHeader } from './WorkspaceHeader';
@@ -21,8 +20,6 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
-
-  const activeUserId = useAppStore((state) => state.activeUserId);
 
   const {
     state: routeState,
@@ -109,11 +106,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           onToggleMobileSidebar={() => setMobileSidebarOpen(true)}
         />
 
-        {/* Main Content Viewport with clean reset key={activeUserId} */}
-        <main
-          key={activeUserId}
-          className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8"
-        >
+        {/* Main Content Viewport */}
+        <main className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
           <div className="w-full max-w-full min-w-0 mx-auto">
             {/* Workspace Header is ONLY rendered for valid, accessible lists (never on forbidden 403, 404, or empty states) */}
             {routeState === 'access' && activeList && (

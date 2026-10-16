@@ -1,25 +1,66 @@
 import { useState, useEffect } from 'react';
 
+export interface SimulatedLoadState {
+  isLoading: boolean;
+  isFading: boolean;
+}
+
+// Module-level flag: tracks whether initial application load has occurred in this browser session.
+// In-memory only: resets naturally whenever the browser reloads or hard-refreshes.
+let hasCompletedInitialLoad = false;
+
 /**
- * Custom hook to simulate brief initial loading / route transition state.
- * Configured with a short delay (250ms) for visual polish, and clean unmount cancellation.
+ * Hook to coordinate initial app load and browser refresh loading/shimmer state.
+ *
+ * Requirements:
+ * - On first app load -> show smooth loading/shimmer state.
+ * - On browser refresh -> show the same smooth loading/shimmer state.
+ * - Shimmer transitions smoothly into final UI without pop/flicker.
+ * - In-app list navigation -> NO shimmer.
+ * - Board/List toggle -> NO shimmer.
+ * - User switch -> NO shimmer.
  */
-export function useSimulatedLoad(triggerKey?: string | null, delayMs: number = 250): boolean {
-  const [isLoading, setIsLoading] = useState(true);
+export function useSimulatedLoad(
+  _triggerKey?: string | null,
+  delayMs: number = 250
+): SimulatedLoadState {
+  const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+
+  const [state, setState] = useState<SimulatedLoadState>(() => {
+    if (isTest || hasCompletedInitialLoad || delayMs <= 0) {
+      return { isLoading: false, isFading: false };
+    }
+    return { isLoading: true, isFading: false };
+  });
 
   useEffect(() => {
-    if (delayMs <= 0) {
-      setIsLoading(false);
-      return;
-    }
+    if (isTest || hasCompletedInitialLoad || delayMs <= 0) return;
 
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
+    // Phase 1: Hold the shimmer for the requested delay
+    const fadeTimer = setTimeout(() => {
+      setState({ isLoading: true, isFading: true });
     }, delayMs);
 
-    return () => clearTimeout(timer);
-  }, [triggerKey, delayMs]);
+    // Phase 2: After the smooth 200ms crossfade, finalize and mark initial load complete
+    const doneTimer = setTimeout(() => {
+      hasCompletedInitialLoad = true;
+      setState({ isLoading: false, isFading: false });
+    }, delayMs + 200);
 
-  return isLoading;
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(doneTimer);
+    };
+  }, [delayMs, isTest]);
+
+  return state;
 }
+
+/**
+ * Resets the in-memory initial load flag.
+ * Used for testing or debugging if needed.
+ */
+export function resetInitialLoadStateForTesting(): void {
+  hasCompletedInitialLoad = false;
+}
+

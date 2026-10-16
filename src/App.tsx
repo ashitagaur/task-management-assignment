@@ -13,7 +13,7 @@ function AppContent() {
   const route = useActiveList();
   const viewMode = useAppStore((state) => state.viewMode);
   const drawer = useDrawer();
-  const isLoading = useSimulatedLoad(route.activeListId, 250);
+  const { isLoading, isFading } = useSimulatedLoad(route.activeListId, 250);
 
   const handleOpenCreate = (statusId?: string) => {
     if (route.activeList) {
@@ -31,22 +31,44 @@ function AppContent() {
           <section
             id="view-container"
             aria-label={`${route.activeList.name} ${viewMode} view container`}
-            className="w-full max-w-full min-w-0"
+            className="w-full max-w-full min-w-0 relative"
           >
-            {isLoading ? (
-              <LoadingSkeleton viewMode={viewMode} />
-            ) : viewMode === 'board' ? (
-              <KanbanBoard
-                listId={route.activeList.id}
-                onTaskClick={(task) => drawer.openEdit(task.id)}
-                onCreateTask={handleOpenCreate}
-              />
-            ) : (
-              <ListView
-                listId={route.activeList.id}
-                onTaskClick={(task) => drawer.openEdit(task.id)}
-                onCreateTask={() => handleOpenCreate()}
-              />
+            {/* View Content: renders in-place, smoothly fading in during initial crossfade */}
+            <div
+              className={
+                isFading
+                  ? 'transition-opacity duration-200 ease-out opacity-100'
+                  : isLoading
+                  ? 'opacity-0'
+                  : ''
+              }
+              aria-hidden={isLoading && !isFading}
+            >
+              {viewMode === 'board' ? (
+                <KanbanBoard
+                  listId={route.activeList.id}
+                  onTaskClick={(task) => drawer.openEdit(task.id)}
+                  onCreateTask={handleOpenCreate}
+                />
+              ) : (
+                <ListView
+                  listId={route.activeList.id}
+                  onTaskClick={(task) => drawer.openEdit(task.id)}
+                  onCreateTask={() => handleOpenCreate()}
+                />
+              )}
+            </div>
+
+            {/* Shimmer skeleton overlay: visible ONLY during initial app load / refresh */}
+            {isLoading && (
+              <div
+                className={`absolute inset-0 z-10 bg-fb-canvas transition-opacity duration-200 ease-out pointer-events-none ${
+                  isFading ? 'opacity-0' : 'opacity-100'
+                }`}
+                aria-hidden="true"
+              >
+                <LoadingSkeleton viewMode={viewMode} />
+              </div>
             )}
           </section>
         ) : null}

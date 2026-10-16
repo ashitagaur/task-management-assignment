@@ -14,7 +14,8 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
       <div
         role="status"
         aria-label="Loading task list"
-        className={`w-full max-w-full min-w-0 bg-white rounded-xl border border-fb-border p-4 shadow-fb-card animate-pulse ${className}`}
+        data-testid="loading-skeleton"
+        className={`w-full max-w-full min-w-0 bg-white rounded-2xl border border-fb-border p-4 shadow-fb-card animate-pulse ${className}`}
       >
         {/* Table Header skeleton */}
         <div className="flex items-center justify-between border-b border-fb-border pb-3 mb-3">
@@ -50,6 +51,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
     <div
       role="status"
       aria-label="Loading kanban board"
+      data-testid="loading-skeleton"
       className={`w-full max-w-full min-w-0 overflow-x-auto pb-4 pt-1 [contain:paint] ${className}`}
     >
       <div className="inline-flex gap-4 min-w-full items-start px-0.5 animate-pulse">
