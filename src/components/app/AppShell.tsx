@@ -13,13 +13,42 @@ export interface AppShellProps {
   children?: React.ReactNode;
 }
 
+const SIDEBAR_COLLAPSED_KEY = 'flowboard.sidebarCollapsed';
+
+function getInitialSidebarCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export const AppShell: React.FC<AppShellProps> = ({
   route,
   onNewTask,
   children,
 }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState<boolean>(getInitialSidebarCollapsed);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Mark mounted after initial paint to prevent initial width transition glitches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleToggleCollapse = () => {
+    setDesktopSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        sessionStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      } catch {
+        // Safe fallback
+      }
+      return next;
+    });
+  };
 
   const {
     state: routeState,
@@ -59,13 +88,15 @@ export const AppShell: React.FC<AppShellProps> = ({
         aria-label="Desktop navigation sidebar"
         className={`hidden lg:flex lg:flex-col ${
           desktopSidebarCollapsed ? 'w-[68px] min-w-[68px]' : 'w-[248px] min-w-[248px]'
-        } bg-fb-sidebar shrink-0 border-r border-gray-800 z-30 transition-[width] duration-200 ease-in-out`}
+        } bg-fb-sidebar shrink-0 border-r border-gray-800 z-30 ${
+          isMounted ? 'transition-[width] duration-200 ease-in-out' : ''
+        }`}
       >
         <Sidebar
           activeListId={sidebarActiveListId}
           onSelectList={handleSelectRoute}
           isCollapsed={desktopSidebarCollapsed}
-          onToggleCollapse={() => setDesktopSidebarCollapsed((prev) => !prev)}
+          onToggleCollapse={handleToggleCollapse}
         />
       </aside>
 
