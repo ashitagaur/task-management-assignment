@@ -142,13 +142,15 @@ If corrections are requested: correct → verify again → report again → sugg
   - `StatusCategory`, `StatusColor`, `TaskStatus`
   - `UserRole`, `User`
   - `GrantMode`, `Grant`
+  - `Capability` union, `RoleDefinition` interface
   - `StaticActivityEntry` (with `userId`, `relativeTime` per Decision 1)
   - `AppErrorCode` union, `AppResult<T>` discriminated union
-- `src/domain/permissions.ts`: Four pure permission functions
-  - `canViewNode()` with strict evaluation order (archive → admin → own-node + ancestors)
-  - `canEditList()` — view = edit for non-archived lists
-  - `canEditTask()` — delegates to `canEditList`
-  - `canManageContainers()` — admin-only
+- `src/domain/permissions.ts`: Capability-based authorization policy engine
+  - `can(userId, capability, resourceId, context)` pure policy engine with 5-step deterministic precedence (archive → effective capability → bypass → hierarchical grants → public/private visibility)
+  - `getEffectiveCapabilities(roleId, roleDefinitions)` with role inheritance, cycle safety, and deduplication
+  - Semantic wrappers: `canViewNode()`, `canCreateTask()`, `canEditTask()`, `canDeleteTask()`, `canMoveTask()`, `canCreateContainer()`, `canRenameContainer()`, `canArchiveContainer()`, `canReorderContainer()`
+  - Symmetric cross-list move verification on source and destination lists
+  - Hierarchical grant propagation (ALLOW propagates down, DENY blocks subtree, DENY strictly wins over ALLOW)
 - `src/domain/ordering.ts`: Position and sorting helpers
   - `reindexPositions<T>(items: T[]): T[]`
   - Priority comparator, due-date comparator, stable tie-breaking
@@ -330,21 +332,20 @@ If corrections are requested: correct → verify again → report again → sugg
 
 **Dependencies**: T04 (store foundation exists).
 
-**Requirement IDs Covered**: T-04, T-05, T-06, T-07, T-08, T-09, T-10, T-11, T-12, T-13, D-06, D-07, P-12, P-13, ST-10, TE-01, TE-03, TE-04, TE-05, TE-06
+**Requirement IDs Covered**: T-04, T-05, T-06, T-07, T-08, T-09, T-10, T-11, T-12, T-13, D-06, D-07, P-06, P-07, P-08, P-09, P-12, P-13, P-16, TE-01, TE-03, TE-04, TE-05, TE-06
 
-**Relevant References**: `docs/01-REQUIREMENTS.md` (T-04..T-13, D-06, D-07, P-12, P-13, ST-10, TE-01..TE-06), `docs/02-ARCHITECTURE.md` §2.1 (Derived State), §5.2 (Task Mutations), `docs/03-TESTING-STRATEGY.md` §1
+**Relevant References**: `docs/01-REQUIREMENTS.md` (T-04..T-13, D-06, D-07, P-06..P-09, P-12, P-13, P-16, TE-01..TE-06), `docs/02-ARCHITECTURE.md` §2.1 (Derived State), §3.2 (Permissions), §5.2 (Task Mutations), `docs/03-TESTING-STRATEGY.md` §1
 
 **Scope**:
 - **Task mutations** (added to store, all return `AppResult`, all use `taskMutationInFlight` lock with `try...finally`):
-  - `createTask(listId, data)` — validates title, assigns default todo status, generates `FE-###` ID, appends to end of column, `reindexPositions`
-  - `updateTask(taskId, patch)` — validates title length, validates statusId belongs to list, permission check via `canEditTask`
-  - `deleteTask(taskId)` — permission check, removes task, reindexes affected column
-  - `moveTaskStatus(taskId, newStatusId, newPosition)` — same-list status/position change (kanban drop), `reindexPositions` on source and destination columns
-  - `moveTaskToList(taskId, destListId)` — cross-list movement with `resolveDestinationStatus`, permission on both lists, `reindexPositions` on all affected columns
-  - `reorderTask(taskId, newPosition)` — within same status column reorder
-  - `bulkUpdateTasks(ids, patch)` — skeleton for Stretch B: all-or-nothing preflight, atomic commit (full implementation in T14)
+  - `createTask(listId, data)` — validates title, assigns default todo status, generates `FE-###` ID, appends to end of column, assigns contiguous integer position `0..n-1` via `reindexPositions`
+  - `updateTask(taskId, patch)` — validates title length, validates statusId belongs to list, capability check via `canEditTask` (`task.update`)
+  - `deleteTask(taskId)` — capability check (`task.delete`), removes task, reindexes affected column (`0..n-1`)
+  - `moveTaskStatus(taskId, newStatusId, newPosition)` — same-list status/position change (kanban drop), deterministic integer positions `0..n-1` via `reindexPositions` on source and destination columns
+  - `moveTaskToList(taskId, destListId)` — cross-list movement with `resolveDestinationStatus`, symmetric capability checks (`task.move`) on both lists, `reindexPositions` on all affected columns
+  - `reorderTask(taskId, newPosition)` — within same status column reorder, delegates to `moveTaskStatus`
 - **Selectors** (`src/store/selectors.ts`):
-  - `getFilteredTree(userId)` — permission-filtered container hierarchy tree, excludes archived
+  - `getFilteredTree(userId)` — permission-filtered container hierarchy tree using `canViewNode`, excludes archived
   - `getKanbanColumns(listId)` — groups tasks by status, sorted by position within each column
   - `getSortedTasks(listId, sortKey, sortDir)` — sorted task array for dense list view
   - `getListStatuses(listId)` — statuses for a list, sorted by position
@@ -352,13 +353,16 @@ If corrections are requested: correct → verify again → report again → sugg
   - `getTaskCount(listId)` — task count for sidebar badge
   - `getVisibleLists(userId)` — all visible lists for route fallback/redirect
 - **Mandatory Domain & Store Tests** (`src/__tests__/permissions.test.ts`):
-  - Alice admin bypass (unrestricted access to non-archived containers)
+  - Role capabilities & inheritance (`getEffectiveCapabilities`, Admin inherits Member, deduplication, cycle protection)
+  - Alice admin bypass (`permission.bypass` on non-archived containers)
   - Bob visibility: public Engineering subtree except denied Sprint 18; no Marketing subtree
-  - Carol visibility: Engineering and Marketing subtrees
-  - Archived containers and ancestors hidden from all users
+  - Carol visibility: Engineering and Marketing subtrees (inherited ALLOW grant)
+  - Deny-wins precedence: ancestor DENY blocks descendant even if descendant has ALLOW
+  - Archive precedence: archived containers and ancestors hidden from all users, even Alice with bypass
   - Member task mutation in accessible list vs. denied list returns `FORBIDDEN` with zero state change
-  - Cross-list move with denied destination returns `FORBIDDEN` with zero state change
-  - Container CRUD by member returns `FORBIDDEN`
+  - Cross-list move requires `task.move` on both source and destination lists symmetrically
+  - Future role safety: test-only Viewer role can read but cannot update (view != edit)
+  - Container management by member returns `FORBIDDEN` (missing `container.*` capabilities)
   - Invalid container parentage returns `INVALID_PARENTAGE`
   - Atomic list creation creates container + 3 default statuses
   - Mutation lock protects user switch during in-flight mutations
@@ -1061,7 +1065,7 @@ If corrections are requested: correct → verify again → report again → sugg
 
 **Why This Task Comes Now**: Requires the dense list view (T09) and task store (T05) to be fully functional. Must come after MVP Gate.
 
-**Dependencies**: T09 (dense list view), T05 (`bulkUpdateTasks` skeleton).
+**Dependencies**: T09 (dense list view), T05 (task store + mutation infrastructure).
 
 **Requirement IDs Covered**: ST-06, ST-07, ST-08, ST-09, ST-10
 
@@ -1090,7 +1094,7 @@ If corrections are requested: correct → verify again → report again → sugg
   - Preflight validation (all-or-nothing):
     1. All task IDs exist in store
     2. All tasks belong to active list
-    3. User has `canEditList` permission
+    3. User has `task.update` permission on list
     4. Target status belongs to active list (for status change)
     5. Assignee IDs are valid users (for add assignees)
   - Simulate failure check (after preflight passes)

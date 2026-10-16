@@ -46,22 +46,35 @@ These are the highest-priority tests. Permission bugs can silently expose or hid
 
 | Test | What It Proves | Requirement IDs |
 |---|---|---|
-| Bob can create a task in Backlog (accessible list) | `canEditTask` via `canEditList` works for members | P-07, P-08, TE-05 |
-| Bob cannot create a task in Sprint 18 (denied list) | `canEditTask` returns `FORBIDDEN`, zero state mutation | P-12, TE-05 |
-| Bob cannot mutate a task in Sprint 18 | Update/delete returns `FORBIDDEN`, state unchanged | P-12, TE-05 |
-| Cross-list move with denied destination returns `FORBIDDEN` | Both source and dest permission checked | T-09, TE-05 |
-| Cross-list move with denied source returns `FORBIDDEN` | Symmetric permission check | T-09, TE-05 |
+| Bob can create a task in Backlog (accessible list) | `task.create` capability on accessible list works for members | P-07, TE-05 |
+| Bob cannot create a task in Sprint 18 (denied list) | `task.create` returns `FORBIDDEN`, zero state mutation | P-12, TE-05 |
+| Bob cannot mutate a task in Sprint 18 | `task.update` / `task.delete` returns `FORBIDDEN`, state unchanged | P-12, TE-05 |
+| Cross-list move requires `task.move` on source and destination | Symmetric capability check on both lists; returns `FORBIDDEN` if either fails | T-09, P-08, TE-05 |
+| Test-only Viewer role can read but cannot update tasks | Proves architecture does not assume `view === edit` | P-07, P-16 |
 
 ### Container Security & Store Guard Tests
 
 | Test | What It Proves | Requirement IDs |
 |---|---|---|
-| Bob cannot create a container | `canManageContainers` is admin-only | H-06, P-09, TE-06 |
-| Bob cannot rename a container | Admin guard on rename | H-06, TE-06 |
-| Bob cannot archive a container | Admin guard on archive | H-06, TE-06 |
+| Member lacks `container.create` capability | Attempted creation returns `FORBIDDEN` | H-06, P-09, TE-06 |
+| Member lacks `container.rename` capability | Attempted rename returns `FORBIDDEN` | H-06, P-09, TE-06 |
+| Member lacks `container.archive` capability | Attempted archive returns `FORBIDDEN` | H-06, P-09, TE-06 |
+| Member lacks `container.reorder` capability | Attempted reorder returns `FORBIDDEN` | H-06, P-09, TE-06 |
 | `createContainer` with invalid parent type returns `INVALID_PARENTAGE` | Strict 4-tier enforcement | H-03 |
 | `createList` creates container + 3 default statuses atomically | Atomic list creation invariant | H-11, S-02 |
 | `setActiveUser` during `taskMutationInFlight` returns `INVARIANT_VIOLATION` | Mutation lock protects user switch | D-06 |
+
+### Role Inheritance & Hierarchical Grants Tests
+
+| Test | What It Proves | Requirement IDs |
+|---|---|---|
+| Member receives configured Member capabilities | `getEffectiveCapabilities('member')` | P-16 |
+| Admin inherits Member capabilities plus Admin capabilities | Role inheritance resolution and deduplication | P-16 |
+| Cyclic or malformed role definitions resolve safely without infinite recursion | Guard against inheritance loops | P-16 |
+| Carol inherits ALLOW grant on Marketing down through Campaigns and Growth | Ancestor ALLOW grant inheritance | P-05, P-16 |
+| Bob is blocked from Sprint 18 and any descendants | Direct / inherited DENY grant | P-04, P-16 |
+| Ancestor DENY blocks descendant even if descendant has ALLOW grant | DENY strictly wins over ALLOW | P-16 |
+| Archived container blocks all users even with `permission.bypass` | Archive check strictly precedes bypass | P-06, P-16 |
 
 ### Test Structure
 
@@ -69,33 +82,42 @@ These are the highest-priority tests. Permission bugs can silently expose or hid
 // src/__tests__/permissions.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
 
-describe('Permission Filtering', () => {
+describe('Domain & Store Permission Tests', () => {
   beforeEach(() => {
     // Reset store to fresh fixture state
   });
 
-  describe('canViewNode — Tree Visibility', () => {
-    it('Alice (admin) sees all non-archived containers', ...);
+  describe('1. Role Capabilities & Inheritance', () => {
+    it('resolves Member capabilities', ...);
+    it('Admin inherits Member capabilities plus Admin-specific capabilities', ...);
+    it('deduplicates inherited capabilities safely', ...);
+    it('guards against cyclic role inheritance', ...);
+  });
+
+  describe('2. Tree Visibility & Hierarchical Grants', () => {
+    it('Alice (admin) sees non-archived containers via permission.bypass', ...);
     it('Bob sees public Engineering subtree except denied Sprint 18', ...);
-    it('Bob does not see private Marketing subtree', ...);
-    it('Carol sees Engineering and Marketing subtrees', ...);
-    it('Archived container is invisible even to Alice', ...);
+    it('Carol sees private Marketing subtree via inherited ALLOW grant', ...);
+    it('Ancestor DENY blocks descendants even if child has ALLOW', ...);
+    it('Archived container is invisible even to Alice with bypass', ...);
     it('Archived ancestor hides all descendants', ...);
   });
 
-  describe('canEditTask — Task Access', () => {
+  describe('3. Task Access & Mutations', () => {
     it('Bob can create task in accessible Backlog list', ...);
     it('Bob cannot create task in denied Sprint 18', ...);
-    it('Cross-list move to denied list returns FORBIDDEN', ...);
+    it('Cross-list move requires task.move on both source and destination', ...);
+    it('Test-only Viewer role can read but cannot update (view != edit)', ...);
   });
 
-  describe('canManageContainers — Admin Guard', () => {
-    it('Bob cannot create container', ...);
-    it('Bob cannot rename container', ...);
-    it('Bob cannot archive container', ...);
+  describe('4. Container Capability Guards', () => {
+    it('Bob cannot create container (missing container.create)', ...);
+    it('Bob cannot rename container (missing container.rename)', ...);
+    it('Bob cannot archive container (missing container.archive)', ...);
+    it('Bob cannot reorder container (missing container.reorder)', ...);
   });
 
-  describe('Store Guards', () => {
+  describe('5. Store Guards & Invariants', () => {
     it('createContainer with invalid parentage returns INVALID_PARENTAGE', ...);
     it('createList creates container + 3 default statuses', ...);
     it('setActiveUser during mutation lock returns INVARIANT_VIOLATION', ...);

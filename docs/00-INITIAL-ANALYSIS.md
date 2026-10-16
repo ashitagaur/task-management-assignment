@@ -39,7 +39,7 @@ Analyzed the Original Take-Home Assignment requirement-by-requirement, cross-ref
 
 **Hierarchy — Strict 4-Tier Enforcement**: The Assignment's "Valid parent types: workspace → space → folder → list" is ambiguous about whether `Space → List` is permitted. Decision: enforce strict 4-tier (`Workspace → Space → Folder → List`). This matches the Assignment's tree diagram, all Figma screenshots, and all fixture data. Impact: uniform tree depth, simpler breadcrumbs, simpler permission traversal, simpler container creation validation. Documented as a deliberate design decision.
 
-**Users and Roles — No Read-Only Role**: Three users (Alice/admin, Bob/member, Carol/member). The Assignment defines no read-only role. `canEditList` = `canViewNode` for non-archived lists. View access implies edit access for tasks. There is no separate "edit" grant type.
+**Users and Roles — Capability-Based RBAC with Role & Grant Inheritance**: Three seeded users (Alice/admin, Bob/member, Carol/member). Authorization is governed by fine-grained capabilities (`container.read`, `task.read`, `task.create`, `task.update`, `task.delete`, `task.move`, `container.create`, `container.rename`, `container.archive`, `container.reorder`, `permission.bypass`) rather than hardcoded role names. Roles inherit capabilities (Admin inherits Member). Member currently holds task write capabilities on accessible lists, matching the Assignment's behavior, while allowing future roles (e.g., Viewer, Manager) simply by configuring capabilities without policy code rewrites.
 
 **Activity — Not an Assignment Requirement**: Activity feed is listed under "Nice-to-have (stretch goals)" in the Assignment, not as mandatory. Our static seeded read-only activity entries are a design fidelity decision matching Figma screenshots, not a required dynamic feature.
 
@@ -61,10 +61,15 @@ Analyzed the Original Take-Home Assignment requirement-by-requirement, cross-ref
 **Change**: The README and testing documents note: "The Assignment permits either component or E2E testing; we chose RTL component testing for faster iteration and deterministic CI behavior at this scale."
 **Impact**: Documentation only. No code change.
 
-### Decision 3 — View Access = Edit Access for Tasks (CONFIRMED)
+### Decision 3 — Capability-Based RBAC & Scalable Authorization (APPROVED REVISION)
 
-**Context**: Authorization model
-**Confirmation**: `canEditList` equals `canViewNode` for non-archived lists. There is no separate edit grant. The Assignment's "can edit tasks in those lists" means "lists they can see." Documented in Architecture.
+**Context**: Authorization architecture
+**Change**: Replaced hardcoded role-name checks (`role === 'admin'`) and permanent `view === edit` assumptions with:
+1. **Capability-based RBAC**: Explicit capabilities for container, task, and bypass actions.
+2. **Role inheritance**: Configurable role definitions (`getEffectiveCapabilities`), where Admin inherits Member capabilities.
+3. **Hierarchical resource & grant inheritance**: Grants propagate down container hierarchy; DENY anywhere in the ancestor path wins over ALLOW; descendant ALLOW cannot resurrect an ancestor DENY.
+4. **Deterministic Precedence**: Archive check strictly precedes bypass; bypass skips normal grants; grants and privacy evaluated hierarchically; task operations derive permissions from `primaryListId`.
+5. **Assignment Fidelity**: Current Member configuration retains task write capabilities on accessible lists, while preserving architectural readiness for read-only Viewers or Manager roles.
 
 ### Decision 4 — Strict 4-Tier Hierarchy Enforcement (CONFIRMED)
 

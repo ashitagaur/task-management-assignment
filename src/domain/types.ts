@@ -39,7 +39,27 @@ export interface TaskStatus {
   listId: string;
 }
 
-export type UserRole = 'admin' | 'member';
+export type Capability =
+  | 'container.read'
+  | 'container.create'
+  | 'container.rename'
+  | 'container.archive'
+  | 'container.reorder'
+  | 'task.read'
+  | 'task.create'
+  | 'task.update'
+  | 'task.delete'
+  | 'task.move'
+  | 'permission.bypass';
+
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  inherits?: string[];
+  capabilities: Capability[];
+}
+
+export type UserRole = 'admin' | 'member' | string;
 
 export interface User {
   id: string;
@@ -56,6 +76,13 @@ export interface Grant {
   resourceId: string;
   userId: string;
   mode: GrantMode;
+}
+
+export interface PermissionContext {
+  containersById: Record<string, ContainerNode>;
+  grants: Grant[];
+  usersById: Record<string, User>;
+  roleDefinitions?: Record<string, RoleDefinition>;
 }
 
 export interface StaticActivityEntry {

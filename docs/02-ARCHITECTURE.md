@@ -27,9 +27,9 @@ This avoids: fake service layers, repository abstractions, CQRS, event buses, DI
 ```
 src/
 ├── domain/                         # Pure TypeScript — ZERO React/Zustand deps
-│   ├── types.ts                    # All domain types, AppResult, AppErrorCode
-│   ├── permissions.ts              # canViewNode, canEditList, canEditTask, canManageContainers
-│   ├── ordering.ts                 # reindexPositions, priority/due-date sorting comparators
+│   ├── types.ts                    # Domain types, RoleDefinition, Capability, AppResult
+│   ├── permissions.ts              # can(), getEffectiveCapabilities(), semantic wrappers
+│   ├── ordering.ts                 # reindexPositions (0..n-1), sorting comparators
 │   ├── task-movement.ts            # resolveDestinationStatus, computeTaskMove
 │   └── constants.ts                # STATUS_COLOR_STYLES, PRIORITY_ORDER, VALID_PARENT_TYPES
 │
@@ -108,28 +108,152 @@ All domain entities required by the data model and assignment requirements:
 - `StatusCategory`, `StatusColor`, `TaskStatus` — list-scoped statuses
 - `UserRole`, `User` — mock users
 - `GrantMode`, `Grant` — permission grants
+- `Capability` — explicit fine-grained capability union
+- `RoleDefinition` — configurable role data structure with inheritance
 - `StaticActivityEntry` — seeded read-only activity (with `userId` and `relativeTime` per Decision 1)
 - `AppErrorCode`, `AppResult<T>` — typed error/result contract
 
 ### 3.2 Permissions (`domain/permissions.ts`)
 
-Four pure functions. All state is passed as arguments (no closures over store).
+Pure authorization engine built around:
+1. **Capability-based RBAC**: Actions are governed by explicit capabilities, not hardcoded role names.
+2. **Role Inheritance**: Roles configure capabilities and can inherit from other roles.
+3. **Hierarchical Resource & Grant Inheritance**: Grants propagate down the container hierarchy (`Workspace → Space → Folder → List → Task`).
+4. **Deterministic Precedence**: Archive check strictly precedes bypass; bypass skips normal grants; grants and privacy evaluated along the hierarchy path; DENY strictly wins over ALLOW.
 
-**`canViewNode(userId, nodeId, containers, grants, users): boolean`**
-- Strict evaluation order:
-  1. Archive check: node or any ancestor archived → `false` (even for admin)
-  2. Admin bypass: `users[userId]?.role === 'admin'` → `true`
-  3. Own-node rule on node AND every ancestor: explicit deny → false; private without allow → false; public → true
+#### 3.2.1 Capabilities & Role Configuration
 
-**`canEditList(userId, listId, containers, grants, users): boolean`**
-- `containers[listId]?.type === 'list' && !containers[listId]?.archived && canViewNode(userId, listId, ...)`
-- View access = edit access for tasks (Decision 3)
+```typescript
+export type Capability =
+  | 'container.read'
+  | 'container.create'
+  | 'container.rename'
+  | 'container.archive'
+  | 'container.reorder'
+  | 'task.read'
+  | 'task.create'
+  | 'task.update'
+  | 'task.delete'
+  | 'task.move'
+  | 'permission.bypass';
 
-**`canEditTask(userId, taskId, tasks, containers, grants, users): boolean`**
-- Delegates to `canEditList(userId, tasks[taskId].primaryListId, ...)`
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  inherits?: string[];
+  capabilities: Capability[];
+}
+```
 
-**`canManageContainers(userId, users): boolean`**
-- `users[userId]?.role === 'admin'`
+#### 3.2.1 Capabilities, Role Configuration & Frontend Source
+
+In Flowboard's frontend-only architecture:
+- **`DEFAULT_ROLES`** (`domain/constants.ts`) defines **WHAT** each role can do (capability assignment & role inheritance).
+- **`usersById`** (`store/fixtures.ts`) defines **WHICH** role each user has:
+  - `user-alice` → `admin`
+  - `user-bob` → `member`
+  - `user-carol` → `member`
+- **`grants`** (`store/fixtures.ts`) defines resource-level allow/deny overrides.
+
+*Note: In production with a backend, identity and role assignment would originate from session/JWT tokens; here, fixture state acts as the simulated authoritative backend. Permission business logic never hardcodes specific user IDs.*
+
+```typescript
+export type Capability =
+  | 'container.read'
+  | 'container.create'
+  | 'container.rename'
+  | 'container.archive'
+  | 'container.reorder'
+  | 'task.read'
+  | 'task.create'
+  | 'task.update'
+  | 'task.delete'
+  | 'task.move'
+  | 'permission.bypass';
+
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  inherits?: string[];
+  capabilities: Capability[];
+}
+
+export interface PermissionContext {
+  containersById: Record<string, ContainerNode>;
+  grants: Grant[];
+  usersById: Record<string, User>;
+  roleDefinitions?: Record<string, RoleDefinition>;
+}
+```
+
+Configured roles in Flowboard:
+- **`member`**: `['container.read', 'task.read', 'task.create', 'task.update', 'task.delete', 'task.move']`
+- **`admin`**: inherits `member`, plus `['container.create', 'container.rename', 'container.archive', 'container.reorder', 'permission.bypass']`
+
+`getEffectiveCapabilities(roleId, roleDefinitions)` traverses the role inheritance graph, deduplicates capabilities, safely handles missing roles, and guards against cycles.
+
+#### 3.2.2 Generic Policy Engine: `can()`
+
+```typescript
+export function can(
+  userId: string,
+  capability: Capability,
+  resourceId: string,
+  context: PermissionContext
+): boolean
+```
+
+**Deterministic Evaluation Precedence & Tree Integrity:**
+1. **Tree Integrity Safeguards (Fail Closed)**:
+   - Hierarchy cycles fail closed (`false`).
+   - Broken ancestry chains (missing parent node) fail closed (`false`).
+2. **Archive Check**: If target or any ancestor in the path is archived (`archived: true`), access is immediately DENIED (`false`). Applies unconditionally, even with `permission.bypass`.
+3. **Effective Role Capabilities**: Resolve capabilities via role inheritance. If user lacks capability → DENIED (`false`).
+4. **Bypass**: Possesses `permission.bypass` → GRANTED (`true`) on non-archived resources without grant checks.
+5. **Hierarchical Grants**: Ancestor or direct `deny` blocks target and subtree (DENY strictly wins over ALLOW).
+6. **Private / Public Visibility**: Private requires direct or inherited `allow`; public allowed unless denied; structural accessibility maintained.
+
+#### 3.2.3 Semantic Task & Container Wrappers
+
+Semantic helper functions accept a lightweight `PermissionContext` object and delegate to `can()`:
+
+**Task Generic Helper**:
+```typescript
+canTask(userId, task, capability, context)
+  → can(userId, capability, task.primaryListId, context)
+```
+
+**Delegating Semantic Wrappers**:
+- `canViewNode(userId, containerId, context)` → `can(userId, 'container.read', containerId, context)`
+- `canCreateTask(userId, listId, context)` → `can(userId, 'task.create', listId, context)`
+- `canEditTask(userId, task, context)` → `canTask(userId, task, 'task.update', context)`
+- `canDeleteTask(userId, task, context)` → `canTask(userId, task, 'task.delete', context)`
+- `canMoveTask(userId, task, destinationListId, context)` → `canTask(userId, task, 'task.move', context) && can(userId, 'task.move', destinationListId, context)`
+- `canCreateContainer(userId, parentId, context)` → `can(userId, 'container.create', parentId, context)`
+- `canRenameContainer(userId, containerId, context)` → `can(userId, 'container.rename', containerId, context)`
+- `canArchiveContainer(userId, containerId, context)` → `can(userId, 'container.archive', containerId, context)`
+- `canReorderContainer(userId, containerId, context)` → `can(userId, 'container.reorder', containerId, context)`
+
+#### 3.2.4 Current Role Capability Matrix
+
+| Capability | Admin | Member | Notes |
+|---|---|---|---|
+| View accessible containers (`container.read`) | Yes | Yes | Evaluated hierarchically |
+| View public resources | Yes | Yes unless denied | Public default |
+| View private resources | Yes | Only with inherited/direct allow | Private default |
+| Bypass normal grants (`permission.bypass`) | Yes | No | Still blocked by archived containers |
+| View archived resources | No | No | Unconditional DENY |
+| Read tasks (`task.read`) | Yes | Yes on accessible lists | Inherited from primaryListId |
+| Create tasks (`task.create`) | Yes | Yes on accessible lists | Inherited from primaryListId |
+| Update tasks (`task.update`) | Yes | Yes on accessible lists | Inherited from primaryListId |
+| Delete tasks (`task.delete`) | Yes | Yes on accessible lists | Inherited from primaryListId |
+| Move tasks (`task.move`) | Yes | Yes when both lists accessible | Symmetrically checked on source & dest |
+| Create containers (`container.create`) | Yes | No | Container management |
+| Rename containers (`container.rename`) | Yes | No | Container management |
+| Archive containers (`container.archive`) | Yes | No | Container management |
+| Reorder containers (`container.reorder`) | Yes | No | Container management |
+
+*Note: This matrix describes CURRENT role configuration in Flowboard fixtures, not hardcoded business logic. Future roles such as `viewer` (with `container.read` and `task.read` only) or `manager` can be added via role configuration with zero changes to policy engine logic.*
 
 ### 3.3 Ordering (`domain/ordering.ts`)
 
@@ -273,26 +397,32 @@ Simple hash-based routing. No React Router dependency needed.
 ## 6. Permission Architecture
 
 ```
-┌───────────────────────────────────────────────┐
-│           domain/permissions.ts               │
-│     (pure functions, zero dependencies)       │
-│                                               │
-│  canViewNode()   canEditList()                │
-│  canEditTask()   canManageContainers()        │
-└──────────────────┬────────────────────────────┘
-                   │ used by
-          ┌────────┼────────────┐
-          │        │            │
-          ▼        ▼            ▼
-     Selectors   Store      Route Guard
-     (tree       Mutations  (redirect on
-      filtering) (FORBIDDEN  user switch)
-                  on deny)
+┌────────────────────────────────────────────────────────┐
+│               domain/permissions.ts                    │
+│        (pure policy engine, zero dependencies)         │
+│                                                        │
+│  can(userId, capability, resourceId, context)          │
+│  getEffectiveCapabilities(roleId, roleDefinitions)     │
+│                                                        │
+│  Semantic Wrappers:                                    │
+│  canViewNode()       canCreateTask()   canEditTask()   │
+│  canDeleteTask()     canMoveTask()                     │
+│  canCreateContainer() canRenameContainer()             │
+│  canArchiveContainer() canReorderContainer()           │
+└───────────────────────────┬────────────────────────────┘
+                            │ used by
+                   ┌────────┼────────────┐
+                   │        │            │
+                   ▼        ▼            ▼
+              Selectors   Store      Route Guard
+              (tree       Mutations  (redirect on
+               filtering) (FORBIDDEN  user switch)
+                           on deny)
 ```
 
-**Architectural invariant**: Permission logic lives exclusively in `domain/permissions.ts`. Components never implement their own permission checks. Components only observe the results (filtered tree, error results from mutations).
+**Architectural invariant**: Authorization logic lives exclusively in `domain/permissions.ts`. Components never implement their own permission checks. Components only observe the results (filtered tree, error results from mutations) or inspect capability wrappers to adapt UI controls (e.g. hiding container management buttons when the active user lacks container management capabilities).
 
-**Member UI restriction**: Container CRUD actions (create, rename, archive, move) are hidden in the UI for members. Store still enforces permissions and returns `FORBIDDEN` if invoked directly.
+**Capability-driven UI adaptations**: Container management actions (create, rename, archive, move) require corresponding `container.*` capabilities. In current role configuration, Admin possesses these capabilities while Member does not; thus container management controls are hidden for Members in the UI and enforced in the store with `FORBIDDEN` error responses.
 
 ---
 

@@ -101,16 +101,17 @@
 | P-03 | Grants: `{ resourceId, userId, mode: allow | deny }` attached to containers | MVP | Assignment §5 |
 | P-04 | Public containers: visible to all members unless explicitly denied | MVP | Assignment §5 |
 | P-05 | Private containers: visible only with explicit `allow` grant (admins bypass) | MVP | Assignment §5 |
-| P-06 | `canViewNode`: archive check → admin bypass → own-node rule on node AND every ancestor | MVP | Architecture §3.2 |
-| P-07 | `canEditList`: equals `canViewNode` for non-archived lists (view = edit for tasks) | MVP | Architecture §3.2, Decision 3 |
-| P-08 | `canEditTask`: delegates to `canEditList` on task's primary list | MVP | Architecture §3.2 |
-| P-09 | `canManageContainers`: admin-only | MVP | Architecture §3.2 |
+| P-06 | `canViewNode`: delegates to generic `can(userId, 'container.read', nodeId)` evaluating archive → capability → bypass → hierarchical grants → public/private visibility | MVP | Architecture §3.2 |
+| P-07 | Task mutations: require explicit capabilities (`task.create`, `task.update`, `task.delete`) evaluated on `task.primaryListId` | MVP | Architecture §3.2 |
+| P-08 | Cross-list task movement: requires `task.move` capability on BOTH source and destination lists symmetrically | MVP | Architecture §3.2 |
+| P-09 | Container management: requires explicit container capabilities (`container.create`, `container.rename`, `container.archive`, `container.reorder`) | MVP | Architecture §3.2 |
 | P-10 | Permission checks in store/selectors — not only in UI | MVP | Assignment §5 |
 | P-11 | Switching users must immediately reflect what tree and boards show | MVP | Assignment §5 |
 | P-12 | Attempting to open/mutate denied resource → clear error (`{ error: { code, message } }`) | MVP | Assignment §5 |
 | P-13 | Permission-filtered tree returns only visible nodes | MVP | Assignment §5 |
 | P-14 | 403 Restricted Card shown for forbidden list navigation (Figma `Node 1:882`) | MVP | Architecture §5.3, Figma `Node 1:882` |
 | P-15 | "Viewing as <User> · <Role>" permission feedback banner | MVP | Figma `Node 1:871` |
+| P-16 | Capability-based RBAC with role inheritance & hierarchical grant inheritance (DENY-wins, archive-before-bypass) | MVP | Architecture §3.2 |
 
 ---
 

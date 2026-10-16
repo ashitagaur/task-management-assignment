@@ -215,7 +215,7 @@ export const INITIAL_GRANTS: Grant[] = [
 
 export const INITIAL_TASKS: Record<string, Task> = {
   // Sprint 18 Tasks
-  'task-101': {
+  'FE-101': {
     id: 'FE-101',
     title: 'Design high-fidelity authentication token flow',
     description: 'Ensure refresh token rotation adheres to OAuth 2.1 specs with strict cookies.',
@@ -228,7 +228,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-10T09:00:00Z',
     updatedAt: '2026-10-10T09:00:00Z',
   },
-  'task-102': {
+  'FE-102': {
     id: 'FE-102',
     title: 'Implement normalized client state cache',
     description: 'Structure entity tables in Zustand with derived selector projections.',
@@ -241,7 +241,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-11T10:00:00Z',
     updatedAt: '2026-10-11T10:00:00Z',
   },
-  'task-103': {
+  'FE-103': {
     id: 'FE-103',
     title: 'Build drag-and-drop sortable Kanban canvas',
     description: 'Configure pointer and touch sensors with collision detection in dnd-kit.',
@@ -254,7 +254,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-12T11:00:00Z',
     updatedAt: '2026-10-12T11:00:00Z',
   },
-  'task-104': {
+  'FE-104': {
     id: 'FE-104',
     title: 'Audit focus trap and ARIA landmarks in modal drawer',
     description: 'Verify keyboard navigation and screen reader live region announcements.',
@@ -267,7 +267,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-13T12:00:00Z',
     updatedAt: '2026-10-13T12:00:00Z',
   },
-  'task-105': {
+  'FE-105': {
     id: 'FE-105',
     title: 'Review optimistic rollback animation spec',
     description: 'Simulate server latency and verify snapshot restoration of position indices.',
@@ -280,7 +280,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-14T13:00:00Z',
     updatedAt: '2026-10-14T13:00:00Z',
   },
-  'task-106': {
+  'FE-106': {
     id: 'FE-106',
     title: 'Deliver Tailwind design token typography scale',
     description: 'Verified exact letter-spacing and line-heights matching Figma artboards.',
@@ -293,7 +293,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-09T08:00:00Z',
     updatedAt: '2026-10-14T16:00:00Z',
   },
-  'task-107': {
+  'FE-107': {
     id: 'FE-107',
     title: 'Extract SVG icons for Lucide integration',
     description: 'Normalize stroke width to 1.75px across all navigation and action buttons.',
@@ -308,7 +308,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
   },
 
   // Backlog Tasks
-  'task-108': {
+  'FE-108': {
     id: 'FE-108',
     title: 'Migrate legacy CSS classes to utility-first tokens',
     description: 'Audit legacy stylesheet and replace with custom fb- tokens.',
@@ -321,7 +321,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-11T14:00:00Z',
     updatedAt: '2026-10-11T14:00:00Z',
   },
-  'task-109': {
+  'FE-109': {
     id: 'FE-109',
     title: 'Create telemetry event dictionary for user switcher',
     description: 'Track time-to-switch and identify common permission navigation denials.',
@@ -334,7 +334,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-12T15:00:00Z',
     updatedAt: '2026-10-12T15:00:00Z',
   },
-  'task-110': {
+  'FE-110': {
     id: 'FE-110',
     title: 'Refactor breadcrumb generator for deep hierarchies',
     description: 'Handle truncated ancestor paths gracefully on viewport widths under 640px.',
@@ -347,7 +347,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-13T16:00:00Z',
     updatedAt: '2026-10-13T16:00:00Z',
   },
-  'task-111': {
+  'FE-111': {
     id: 'FE-111',
     title: 'Benchmark table virtualizer against dense DOM trees',
     description: 'Verify 60fps scrolling performance with 500+ rendered list rows.',
@@ -362,7 +362,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
   },
 
   // Growth Campaigns Tasks (Marketing Space)
-  'task-112': {
+  'FE-112': {
     id: 'FE-112',
     title: 'Q4 Product Hunt launch banner assets',
     description: 'Design responsive vector banners matching the dark theme sidebar aesthetic.',
@@ -375,7 +375,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-13T09:00:00Z',
     updatedAt: '2026-10-13T09:00:00Z',
   },
-  'task-113': {
+  'FE-113': {
     id: 'FE-113',
     title: 'Customer onboarding email drip copy review',
     description: 'Ensure tone is helpful, concise, and links directly to feature deep-dives.',
@@ -388,7 +388,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-14T10:00:00Z',
     updatedAt: '2026-10-14T10:00:00Z',
   },
-  'task-114': {
+  'FE-114': {
     id: 'FE-114',
     title: 'Interactive product demo sandbox environment',
     description: 'Pre-populate fixture data so prospect trials showcase populated boards instantly.',
@@ -401,7 +401,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-14T11:00:00Z',
     updatedAt: '2026-10-14T11:00:00Z',
   },
-  'task-115': {
+  'FE-115': {
     id: 'FE-115',
     title: 'Social proof testimonial cards for landing page',
     description: 'Extract customer quotes and format into accessible grid component.',
@@ -414,7 +414,7 @@ export const INITIAL_TASKS: Record<string, Task> = {
     createdAt: '2026-10-10T12:00:00Z',
     updatedAt: '2026-10-14T17:00:00Z',
   },
-  'task-116': {
+  'FE-116': {
     id: 'FE-116',
     title: 'Set up Google Analytics 4 conversion tracking tags',
     description: 'Add custom events for list creation, task completion, and view toggling.',
@@ -430,10 +430,10 @@ export const INITIAL_TASKS: Record<string, Task> = {
 };
 
 export const INITIAL_ACTIVITY: Record<string, StaticActivityEntry[]> = {
-  'task-101': [
+  'FE-101': [
     {
       id: 'act-1',
-      taskId: 'task-101',
+      taskId: 'FE-101',
       userId: 'user-alice',
       text: 'created task and assigned to Alice Admin and Bob Member',
       relativeTime: '6 days ago',
@@ -441,27 +441,27 @@ export const INITIAL_ACTIVITY: Record<string, StaticActivityEntry[]> = {
     },
     {
       id: 'act-2',
-      taskId: 'task-101',
+      taskId: 'FE-101',
       userId: 'user-bob',
       text: 'updated priority to High',
       relativeTime: '5 days ago',
       createdAt: '2026-10-11T10:15:00Z',
     },
   ],
-  'task-102': [
+  'FE-102': [
     {
       id: 'act-3',
-      taskId: 'task-102',
+      taskId: 'FE-102',
       userId: 'user-alice',
       text: 'created task with Urgent priority',
       relativeTime: '5 days ago',
       createdAt: '2026-10-11T10:00:00Z',
     },
   ],
-  'task-103': [
+  'FE-103': [
     {
       id: 'act-4',
-      taskId: 'task-103',
+      taskId: 'FE-103',
       userId: 'user-alice',
       text: 'assigned task to Carol Member',
       relativeTime: '4 days ago',
@@ -469,17 +469,17 @@ export const INITIAL_ACTIVITY: Record<string, StaticActivityEntry[]> = {
     },
     {
       id: 'act-5',
-      taskId: 'task-103',
+      taskId: 'FE-103',
       userId: 'user-carol',
       text: 'moved task to In Progress',
       relativeTime: '2 days ago',
       createdAt: '2026-10-14T14:30:00Z',
     },
   ],
-  'task-105': [
+  'FE-105': [
     {
       id: 'act-6',
-      taskId: 'task-105',
+      taskId: 'FE-105',
       userId: 'user-carol',
       text: 'moved task to In Review',
       relativeTime: 'yesterday',

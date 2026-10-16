@@ -52,7 +52,7 @@ graph TD
     end
 
     subgraph Pure Domain Layer
-        Permissions["domain/permissions.ts (canViewNode, canEditTask, canManageContainers)"]
+        Permissions["domain/permissions.ts (can, getEffectiveCapabilities, semantic wrappers)"]
         Ordering["domain/ordering.ts (reindexPositions, sortComparators)"]
         StatusRemap["domain/status.ts (resolveDestinationStatus)"]
         Types["domain/types.ts (Discriminated Unions, AppResult)"]
@@ -88,13 +88,15 @@ graph TD
 1. **Normalized Single Source of Truth**:
    - Entities (`containersById`, `tasksById`, `statusesById`, `usersById`, `grants`) are stored in normalized maps inside a typed Zustand store.
    - Kanban Board and Dense List views consume projections derived from this single source of truth, guaranteeing zero state drift between views.
-2. **Authoritative Domain Layer Below the UI**:
-   - Authorization checks (`canViewNode`, `canEditList`, `canEditTask`, `canManageContainers`) are implemented as pure TypeScript functions in `domain/permissions.ts`.
-   - Store mutations enforce permissions directly, returning typed `AppResult<T>` errors (`FORBIDDEN`) when unauthorized mutations are attempted. Authorization does not rely on UI visibility.
+2. **Capability-Based Authorization & Domain Layer**:
+   - Authorization is governed by explicit capabilities (`container.*`, `task.*`, `permission.bypass`) rather than hardcoded role names (`user.role === 'admin'`).
+   - Role configuration (`getEffectiveCapabilities`) supports role inheritance (Admin inherits Member), allowing future roles (Viewer, Manager) to be introduced via configuration without policy rewrites.
+   - Pure policy engine (`can()`) enforces a deterministic precedence model: archive check strictly precedes bypass; bypass skips normal grants; grants inherit hierarchically where DENY strictly wins over ALLOW.
+   - Store mutations enforce permissions directly, returning typed `AppResult<T>` errors (`FORBIDDEN`) when unauthorized mutations are attempted.
 3. **Route as Truth for Active Context**:
    - The active list is read directly from the hash fragment (`#/list/:listId`), eliminating dual-state synchronization bugs between routing and store.
 4. **Deterministic Mutations & Invariant Protection**:
-   - Contiguous sibling ordering is guaranteed via `reindexPositions()` on every position-affecting operation.
+   - Contiguous sibling ordering (`0..n-1`) is guaranteed via `reindexPositions()` on every position-affecting operation.
    - Cross-list task moves safely remap statuses using category matching (`resolveDestinationStatus`).
    - A `taskMutationInFlight` concurrency lock guards all task mutations against overlapping or race conditions.
 5. **Strict Design Token Fidelity**:
@@ -117,7 +119,9 @@ Workspace (Flowboard Workspace)
 - **Lists Own Status Sets**: Every list defines its own discrete set of statuses (minimum 3: `todo`, `in_progress`, `done`). A task's `statusId` must strictly belong to its primary list's status set.
 - **Grants & Visibility**:
   - Public containers are visible to all members unless explicitly denied.
-  - Private containers are invisible unless an explicit `allow` grant exists (admins bypass).
+  - Private containers are invisible unless an explicit `allow` grant exists on the container or inherited from an ancestor (`permission.bypass` skips normal grant checks).
+  - Ancestor ALLOW propagates down the subtree; ancestor DENY blocks the entire subtree (DENY strictly wins over ALLOW).
+  - Archived containers and subtrees are unconditionally hidden from all users, even those with `permission.bypass`.
   - Structural tree pruning hides descendant nodes if any ancestor is inaccessible or archived.
 
 ---

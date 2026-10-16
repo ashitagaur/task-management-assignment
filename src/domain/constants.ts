@@ -1,4 +1,31 @@
-import { ContainerType, StatusColor, TaskPriority, StatusCategory } from './types';
+import { ContainerType, StatusColor, TaskPriority, StatusCategory, RoleDefinition } from './types';
+
+export const DEFAULT_ROLES: Record<string, RoleDefinition> = {
+  member: {
+    id: 'member',
+    name: 'Member',
+    capabilities: [
+      'container.read',
+      'task.read',
+      'task.create',
+      'task.update',
+      'task.delete',
+      'task.move',
+    ],
+  },
+  admin: {
+    id: 'admin',
+    name: 'Admin',
+    inherits: ['member'],
+    capabilities: [
+      'container.create',
+      'container.rename',
+      'container.archive',
+      'container.reorder',
+      'permission.bypass',
+    ],
+  },
+};
 
 export const VALID_PARENT_TYPES: Record<Exclude<ContainerType, 'workspace'>, ContainerType> = {
   space: 'workspace',
