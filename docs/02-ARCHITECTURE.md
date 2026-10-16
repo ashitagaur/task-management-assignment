@@ -377,20 +377,16 @@ Simple hash-based routing. No React Router dependency needed.
 
 ```
 #/list/:listId    →  Active list (Board or List view based on viewMode)
-#/                →  Redirect to first visible list
-(no match)        →  Redirect to first visible list
+#/                →  Auto-selects first accessible visible list
+(invalid/archived)→  404 Not Found (URL preserved)
+(valid forbidden) →  403 Forbidden (URL preserved)
 ```
 
-**Route parsing**: `useActiveList()` hook reads `window.location.hash`, extracts `listId`.
-
-**Route reconciliation on user switch**:
-1. Parse current `#/list/:listId`
-2. Check `canViewNode(newUserId, listId, ...)` 
-3. If denied or archived → redirect to first visible list + show toast
-4. If no visible list → render empty state
-
-**Direct navigation to forbidden list**:
-- Render 403 Restricted Card (Figma `Node 1:882`) with "Go to first list" button
+**Route parsing & state resolution**:
+- **Valid + Accessible**: Renders the Kanban Board or Dense List view.
+- **Direct Navigation to Forbidden List**: Renders 403 Restricted Card (Figma `Node 1:882`) explaining access restriction, preserving the URL.
+- **Invalid, Non-Existent, or Archived Route**: Renders 404 Not Found Card explaining the list cannot be found or has been archived, preserving the URL.
+- **User Switch Reconciliation**: When switching users while viewing a list that the new user cannot access (or an invalid route), seamlessly updates the URL via `replaceState` to the new user's first accessible visible list and displays a subtle informational toast (never 403 or blank state).
 
 ---
 

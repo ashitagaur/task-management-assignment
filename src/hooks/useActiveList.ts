@@ -154,8 +154,9 @@ export function useActiveList(): ActiveListRoute {
 
   // User switch detection (derived purely during render)
   const didUserSwitch = prevUserIdRef.current !== activeUserId;
+  const isCurrentListAccessible = Boolean(isValidList && canView);
   const isUserSwitchToInaccessible = Boolean(
-    didUserSwitch && isValidList && !canView && defaultListId
+    didUserSwitch && !isEmptyRootHash && !isCurrentListAccessible && defaultListId
   );
 
   // Helper to replace URL to canonical app root (/) and update local state
@@ -187,20 +188,21 @@ export function useActiveList(): ActiveListRoute {
     prevUserIdRef.current = activeUserId;
 
     // USER SWITCH reconciliation:
-    // If perspective switch made current list inaccessible, replace URL and notify user
-    if (userSwitched && isValidList && !canView && defaultListId) {
+    // If perspective switch made current list inaccessible (forbidden or invalid/not-found),
+    // replace URL to first accessible visible list and notify user
+    if (userSwitched && !isEmptyRootHash && !isCurrentListAccessible && defaultListId) {
       if (typeof window !== 'undefined' && window.location.hash !== `#/list/${defaultListId}`) {
         window.history.replaceState(null, '', `/#/list/${defaultListId}`);
         setCurrentHash(`#/list/${defaultListId}`);
       }
 
       // Guard against duplicate toasts in StrictMode or re-renders
-      const switchKey = `${prevUserId}->${activeUserId}:${rawListId}`;
+      const switchKey = `${prevUserId}->${activeUserId}:${rawListId || 'invalid'}`;
       if (lastToastSwitchRef.current !== switchKey) {
         lastToastSwitchRef.current = switchKey;
 
         if (toastContext) {
-          const fromName = targetNode?.name || 'Previous list';
+          const fromName = targetNode?.name || 'That list';
           const toName = defaultList?.name || 'accessible list';
           const newUserName = usersById[activeUserId]?.name?.split(' ')[0] || 'User';
           toastContext.showToast({
@@ -226,6 +228,7 @@ export function useActiveList(): ActiveListRoute {
     }
   }, [
     activeUserId,
+    isCurrentListAccessible,
     isValidList,
     canView,
     defaultListId,

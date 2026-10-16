@@ -530,9 +530,10 @@ If corrections are requested: correct → verify again → report again → sugg
   - "No tasks here yet" illustration for empty lists (Figma `Node 1:963`)
   - "Add task" button
 - Route guard integration:
-  - If active list is denied → show RestrictedCard
+  - If active list is valid but denied → show RestrictedCard (403), URL preserved
+  - If active list is invalid, non-existent, or archived → show 404 Not Found card, URL preserved
   - If no visible list at all → show EmptyState
-  - Archive reconciliation: if active list archived → redirect + toast
+  - User switch reconciliation: if active list is inaccessible to new user → auto-reconcile to first visible list + subtle toast
 
 **Likely Files/Modules**:
 - `src/components/sidebar/Sidebar.tsx`
@@ -546,7 +547,7 @@ If corrections are requested: correct → verify again → report again → sugg
 - Container menu actions must call store mutations and handle `AppResult` errors
 - Off-canvas sidebar needs proper focus trap and `aria-expanded`
 - Tree node expand/collapse is local transient state — not persisted in store
-- Archive: if the archived container is the active list, redirect to first visible list
+- Archive: if an active list or its ancestor is archived, the route displays a 404 Not Found card with the URL preserved
 
 **Acceptance Criteria**:
 1. Sidebar shows permission-filtered tree for each user (Alice sees all, Bob sees Engineering/Q2 Launch/Backlog only, Carol sees all including Marketing)
