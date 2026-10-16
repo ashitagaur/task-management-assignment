@@ -59,7 +59,7 @@ export const ListView: React.FC<ListViewProps> = ({
 
   if (tasks.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 w-full max-w-full min-w-0">
         <EmptyState
           title="No tasks here yet"
           description="Drop a task here or create one."
@@ -73,10 +73,10 @@ export const ListView: React.FC<ListViewProps> = ({
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-6 w-full max-w-full min-w-0 ${className}`}>
       {/* Table Card Container */}
-      <div className="bg-white rounded-2xl border border-fb-border shadow-fb-card overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="w-full max-w-full min-w-0 bg-white rounded-2xl border border-fb-border shadow-fb-card overflow-hidden">
+        <div className="w-full max-w-full min-w-0 overflow-x-auto [contain:paint]">
           <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
               <tr className="border-b border-fb-border bg-gray-50/75 text-[11px] font-bold text-fb-text-muted uppercase tracking-wider select-none">

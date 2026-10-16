@@ -56,7 +56,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const sidebarActiveListId = routeState === 'access' ? activeListId : null;
 
   return (
-    <div className="h-screen w-screen flex bg-fb-canvas overflow-hidden font-sans">
+    <div className="h-screen w-full max-w-full flex bg-fb-canvas overflow-hidden font-sans">
       {/* Desktop Sidebar (fixed 248px or compact 68px rail, hidden on mobile/tablet) */}
       <aside
         aria-label="Desktop navigation sidebar"
@@ -100,7 +100,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       )}
 
       {/* Right Region: Topbar + Main Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 w-full max-w-full h-full overflow-hidden">
         {/* Topbar with routing state awareness for breadcrumbs */}
         <Topbar
           activeListId={sidebarActiveListId}
@@ -112,9 +112,9 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* Main Content Viewport with clean reset key={activeUserId} */}
         <main
           key={activeUserId}
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8"
+          className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8"
         >
-          <div className="mx-auto">
+          <div className="w-full max-w-full min-w-0 mx-auto">
             {/* Workspace Header is ONLY rendered for valid, accessible lists (never on forbidden 403, 404, or empty states) */}
             {routeState === 'access' && activeList && (
               <WorkspaceHeader

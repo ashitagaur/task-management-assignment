@@ -64,7 +64,7 @@ export const ToastContainer: React.FC<{
     <div
       aria-live="polite"
       aria-atomic="true"
-      className="fixed bottom-5 right-5 z-toast flex flex-col gap-2 max-w-sm w-full pointer-events-none"
+      className="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-5 z-toast flex flex-col gap-2 max-w-sm sm:w-full pointer-events-none"
     >
       {toasts.map((toast) => {
         const isError = toast.type === 'error';

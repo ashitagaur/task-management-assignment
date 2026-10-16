@@ -55,22 +55,22 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
   }
 
   return (
-    <nav aria-label="Breadcrumb" className={`flex items-center text-xs text-fb-text-secondary ${className}`}>
-      <ol className="flex items-center space-x-1.5 flex-wrap">
+    <nav aria-label="Breadcrumb" className={`flex items-center text-xs text-fb-text-secondary min-w-0 overflow-hidden ${className}`}>
+      <ol className="flex items-center space-x-1 flex-nowrap min-w-0 overflow-hidden">
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1;
 
           return (
             <React.Fragment key={crumb.id}>
               {index > 0 && (
-                <li className="text-fb-text-subtle select-none px-0.5" aria-hidden="true">
+                <li className="text-fb-text-subtle select-none px-0.5 shrink-0" aria-hidden="true">
                   /
                 </li>
               )}
-              <li className="flex items-center">
+              <li className="flex items-center min-w-0 shrink">
                 {isLast ? (
                   <span
-                    className="font-semibold text-fb-text-primary truncate max-w-[160px] sm:max-w-xs"
+                    className="font-semibold text-fb-text-primary truncate max-w-[110px] sm:max-w-xs"
                     aria-current="page"
                   >
                     {crumb.name}
@@ -79,12 +79,12 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
                   <button
                     type="button"
                     onClick={() => onNavigate(crumb.id)}
-                    className="hover:text-fb-primary hover:underline transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fb-primary rounded truncate max-w-[120px] sm:max-w-[160px]"
+                    className="hover:text-fb-primary hover:underline transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fb-primary rounded truncate max-w-[70px] sm:max-w-[140px]"
                   >
                     {crumb.name}
                   </button>
                 ) : (
-                  <span className="text-fb-text-secondary truncate max-w-[120px] sm:max-w-[160px]">
+                  <span className="text-fb-text-secondary truncate max-w-[70px] sm:max-w-[140px]">
                     {crumb.name}
                   </span>
                 )}

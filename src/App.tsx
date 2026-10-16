@@ -1,9 +1,11 @@
 import { useActiveList } from './hooks/useActiveList';
+import { useSimulatedLoad } from './hooks/useSimulatedLoad';
 import { AppShell } from './components/app/AppShell';
 import { useAppStore } from './store/store';
 import { useDrawer } from './hooks/useDrawer';
 import { KanbanBoard } from './components/board/KanbanBoard';
 import { ListView } from './components/list/ListView';
+import { LoadingSkeleton } from './components/shared/LoadingSkeleton';
 import { TaskDrawer } from './components/drawer/TaskDrawer';
 import { ToastProvider } from './components/shared/Toast';
 
@@ -11,6 +13,7 @@ function AppContent() {
   const route = useActiveList();
   const viewMode = useAppStore((state) => state.viewMode);
   const drawer = useDrawer();
+  const isLoading = useSimulatedLoad(route.activeListId, 250);
 
   const handleOpenCreate = (statusId?: string) => {
     if (route.activeList) {
@@ -28,9 +31,11 @@ function AppContent() {
           <section
             id="view-container"
             aria-label={`${route.activeList.name} ${viewMode} view container`}
-            className="w-full"
+            className="w-full max-w-full min-w-0"
           >
-            {viewMode === 'board' ? (
+            {isLoading ? (
+              <LoadingSkeleton viewMode={viewMode} />
+            ) : viewMode === 'board' ? (
               <KanbanBoard
                 listId={route.activeList.id}
                 onTaskClick={(task) => drawer.openEdit(task.id)}

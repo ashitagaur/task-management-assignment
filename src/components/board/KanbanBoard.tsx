@@ -195,7 +195,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         description="Drop a task here or create one."
         actionLabel="Add task"
         onAction={() => onCreateTask()}
-        className="my-12"
+        className="my-12 w-full max-w-full min-w-0"
       />
     );
   }
@@ -209,7 +209,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragCancel={handleDragCancel}
     >
       <div
-        className={`w-full overflow-x-auto pb-4 pt-1 ${className}`}
+        className={`w-full max-w-full min-w-0 overflow-x-auto pb-4 pt-1 [contain:paint] ${className}`}
         id="kanban-board-scroll-container"
       >
         <div className="inline-flex gap-4 min-w-full items-start px-0.5">

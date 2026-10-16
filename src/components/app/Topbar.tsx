@@ -18,19 +18,19 @@ export const Topbar: React.FC<TopbarProps> = ({
   onToggleMobileSidebar,
 }) => {
   return (
-    <header className="h-16 min-h-[64px] bg-white border-b border-fb-border px-4 lg:px-6 flex items-center justify-between gap-4 z-20 shrink-0">
+    <header className="h-16 min-h-[64px] bg-white border-b border-fb-border px-4 lg:px-6 flex items-center justify-between gap-3 z-20 shrink-0 w-full max-w-full min-w-0">
       {/* Left: Mobile menu toggle + Breadcrumbs */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <button
           type="button"
           onClick={onToggleMobileSidebar}
           aria-label="Toggle navigation menu"
-          className="lg:hidden p-1.5 rounded-lg text-fb-text-secondary hover:text-fb-text-primary hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
+          className="lg:hidden p-1.5 rounded-lg text-fb-text-secondary hover:text-fb-text-primary hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary shrink-0"
         >
           <Menu className="w-5 h-5" aria-hidden="true" />
         </button>
 
-        <div className="min-w-0 overflow-hidden">
+        <div className="min-w-0 overflow-hidden flex-1">
           <Breadcrumbs
             activeListId={activeListId}
             routeState={routeState}
