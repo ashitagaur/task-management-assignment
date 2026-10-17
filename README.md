@@ -5,6 +5,11 @@ Flowboard is a client-side project management application built for modern softw
 The codebase implements a complete frontend solution for the ClickUp / Asana take-home assignment, backed by in-memory fixture state and deterministic browser routing.
 
 ---
+## Demo
+
+- **Live Demo:** [Open Flowboard](https://task-management-assignment-red.vercel.app/)
+- **Video Walkthrough:** [Watch on Loom](https://www.loom.com/share/354c4c547b954d2eb3a91a6e4ea89aee)
+---
 
 ## Tech Stack
 
