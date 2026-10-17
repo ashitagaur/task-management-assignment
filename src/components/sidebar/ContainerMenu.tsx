@@ -216,11 +216,10 @@ export const ContainerMenu: React.FC<ContainerMenuProps> = ({
                   type="button"
                   disabled={isFirstSibling}
                   onClick={() => handleAction(() => moveContainerUp(node.id))}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fb-primary ${
-                    isFirstSibling
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fb-primary ${isFirstSibling
                       ? 'opacity-40 cursor-not-allowed text-gray-500'
                       : 'hover:bg-gray-800 text-gray-200 hover:text-white'
-                  }`}
+                    }`}
                 >
                   <ArrowUp className="w-3.5 h-3.5 text-gray-400" />
                   <span>Move Up</span>
@@ -230,11 +229,10 @@ export const ContainerMenu: React.FC<ContainerMenuProps> = ({
                   type="button"
                   disabled={isLastSibling}
                   onClick={() => handleAction(() => moveContainerDown(node.id))}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fb-primary ${
-                    isLastSibling
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fb-primary ${isLastSibling
                       ? 'opacity-40 cursor-not-allowed text-gray-500'
                       : 'hover:bg-gray-800 text-gray-200 hover:text-white'
-                  }`}
+                    }`}
                 >
                   <ArrowDown className="w-3.5 h-3.5 text-gray-400" />
                   <span>Move Down</span>
@@ -250,7 +248,7 @@ export const ContainerMenu: React.FC<ContainerMenuProps> = ({
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-fb-danger hover:bg-fb-danger/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fb-primary"
                 >
                   <Archive className="w-3.5 h-3.5" />
-                  <span>Archive</span>
+                  <span>Delete</span>
                 </button>
               </div>
             )}

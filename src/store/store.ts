@@ -78,7 +78,8 @@ export interface AppStoreState {
   ) => AppResult<ContainerNode>;
   createList: (
     parentId: string,
-    name: string
+    name: string,
+    isPrivate?: boolean
   ) => AppResult<{ container: ContainerNode; statuses: TaskStatus[] }>;
   renameContainer: (id: string, name: string) => AppResult<ContainerNode>;
   archiveContainer: (id: string) => AppResult<ContainerNode>;
@@ -250,7 +251,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   },
 
   // 2. Atomic Create List (Container + 3 Default Statuses)
-  createList: (parentId, name) => {
+  createList: (parentId, name, isPrivate = false) => {
     const state = get();
     const trimmedName = name.trim();
     const context = getPermissionContext(state);
@@ -288,7 +289,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       type: 'list',
       parentId,
       position: siblings.length,
-      isPrivate: false,
+      isPrivate: Boolean(isPrivate),
       archived: false,
     };
 

@@ -22,7 +22,7 @@ let hasCompletedInitialLoad = false;
  */
 export function useSimulatedLoad(
   _triggerKey?: string | null,
-  delayMs: number = 250
+  delayMs: number = 80
 ): SimulatedLoadState {
   const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 
@@ -36,16 +36,16 @@ export function useSimulatedLoad(
   useEffect(() => {
     if (isTest || hasCompletedInitialLoad || delayMs <= 0) return;
 
-    // Phase 1: Hold the shimmer for the requested delay
+    // Phase 1: Hold the shimmer briefly (80ms)
     const fadeTimer = setTimeout(() => {
       setState({ isLoading: true, isFading: true });
     }, delayMs);
 
-    // Phase 2: After the smooth 200ms crossfade, finalize and mark initial load complete
+    // Phase 2: After the smooth 100ms crossfade, finalize and mark initial load complete
     const doneTimer = setTimeout(() => {
       hasCompletedInitialLoad = true;
       setState({ isLoading: false, isFading: false });
-    }, delayMs + 200);
+    }, delayMs + 100);
 
     return () => {
       clearTimeout(fadeTimer);

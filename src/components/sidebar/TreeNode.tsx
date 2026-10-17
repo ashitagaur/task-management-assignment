@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Layers, Lock, Hash } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash } from 'lucide-react';
 import { ContainerNode, ContainerType } from '../../domain/types';
 import { useAppStore } from '../../store/store';
 import { getTaskCount } from '../../store/selectors';
@@ -74,7 +74,7 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
           className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fb-primary"
         >
           {node.type === 'space' ? (
-            <Layers className="w-4 h-4 text-fb-primary/90" />
+            <span className="text-xs font-bold text-gray-400">{node.name.charAt(0)}</span>
           ) : isExpanded ? (
             <FolderOpen className="w-4 h-4 text-amber-400/90" />
           ) : (
@@ -139,21 +139,17 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
               )}
             </span>
 
-            <span className="shrink-0 text-gray-400 group-hover:text-gray-300" aria-hidden="true">
-              {node.type === 'space' ? (
-                <Layers className="w-3.5 h-3.5 text-fb-primary/80" />
-              ) : isExpanded ? (
-                <FolderOpen className="w-3.5 h-3.5 text-amber-400/80" />
-              ) : (
-                <Folder className="w-3.5 h-3.5 text-amber-400/80" />
-              )}
-            </span>
+            {node.type !== 'space' && (
+              <span className="shrink-0 text-gray-400 group-hover:text-gray-300" aria-hidden="true">
+                {isExpanded ? (
+                  <FolderOpen className="w-3.5 h-3.5 text-amber-400/80" />
+                ) : (
+                  <Folder className="w-3.5 h-3.5 text-amber-400/80" />
+                )}
+              </span>
+            )}
 
             <span className="truncate text-xs">{node.name}</span>
-
-            {node.isPrivate && (
-              <Lock className="w-3 h-3 text-gray-500 shrink-0 ml-1" aria-label="Private container" />
-            )}
           </button>
         ) : (
           <button
@@ -170,10 +166,6 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
             </span>
 
             <span className="truncate text-xs">{node.name}</span>
-
-            {node.isPrivate && (
-              <Lock className="w-3 h-3 text-gray-500 shrink-0 ml-1" aria-label="Private container" />
-            )}
           </button>
         )}
 

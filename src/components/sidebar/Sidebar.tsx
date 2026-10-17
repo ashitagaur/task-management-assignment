@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
 
     if (type === 'list') {
-      const result = createList(parentId, name);
+      const result = createList(parentId, name, isPrivate);
       if (result.success) {
         onSelectList(result.data.container.id);
         return { success: true };

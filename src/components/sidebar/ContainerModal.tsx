@@ -123,7 +123,7 @@ export const ContainerModal: React.FC<ContainerModalProps> = ({
             />
           </div>
 
-          {mode === 'create' && childType !== 'list' && (
+          {mode === 'create' && (
             <div className="flex items-center gap-2">
               <input
                 id="container-private-checkbox"

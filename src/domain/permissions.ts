@@ -140,6 +140,7 @@ export function can(
   }
 
   // 5. PRIVATE/PUBLIC VISIBILITY & STRUCTURAL ACCESSIBILITY
+  let hasEncounteredPrivateAncestor = false;
   let inheritedAllow = false;
 
   for (const node of path) {
@@ -151,9 +152,16 @@ export function can(
     }
 
     if (node.isPrivate) {
-      if (!inheritedAllow) {
+      hasEncounteredPrivateAncestor = true;
+      // An explicitly private container requires its own direct allow grant or admin bypass
+      const hasNodeDirectAllow = grants.some(
+        (g) => g.resourceId === node.id && g.userId === userId && g.mode === 'allow'
+      );
+      if (!hasNodeDirectAllow) {
         return false;
       }
+    } else if (hasEncounteredPrivateAncestor && !inheritedAllow) {
+      return false;
     }
   }
 

@@ -182,6 +182,46 @@ describe('Domain & Store Permission Tests', () => {
       expect(ids).toContain('list-growth');
     });
 
+    it('Containers created with isPrivate=true are visible ONLY to admin, pruned for all members', () => {
+      useAppStore.getState().setActiveUser('user-alice');
+
+      // Alice creates a private space, a private folder, and a private list
+      const spaceRes = useAppStore.getState().createContainer('ws-flowboard', 'Executive Space', 'space', true);
+      expect(spaceRes.success).toBe(true);
+      if (!spaceRes.success) return;
+      const spaceId = spaceRes.data.id;
+
+      const folderRes = useAppStore.getState().createContainer(spaceId, 'Confidential Folder', 'folder', true);
+      expect(folderRes.success).toBe(true);
+      if (!folderRes.success) return;
+      const folderId = folderRes.data.id;
+
+      const listRes = useAppStore.getState().createList(folderId, 'Secret Payroll', true);
+      expect(listRes.success).toBe(true);
+      if (!listRes.success) return;
+      const listId = listRes.data.container.id;
+
+      // Alice (Admin with bypass) sees all three
+      const aliceTree = getFilteredTree(useAppStore.getState()).map((c) => c.id);
+      expect(aliceTree).toContain(spaceId);
+      expect(aliceTree).toContain(folderId);
+      expect(aliceTree).toContain(listId);
+
+      // Bob (member without grants) cannot see any of them
+      useAppStore.getState().setActiveUser('user-bob');
+      const bobTree = getFilteredTree(useAppStore.getState()).map((c) => c.id);
+      expect(bobTree).not.toContain(spaceId);
+      expect(bobTree).not.toContain(folderId);
+      expect(bobTree).not.toContain(listId);
+
+      // Carol (member without grants on this space) cannot see any of them
+      useAppStore.getState().setActiveUser('user-carol');
+      const carolTree = getFilteredTree(useAppStore.getState()).map((c) => c.id);
+      expect(carolTree).not.toContain(spaceId);
+      expect(carolTree).not.toContain(folderId);
+      expect(carolTree).not.toContain(listId);
+    });
+
     it('Ancestor DENY blocks descendants even if child has explicit ALLOW (DENY wins)', () => {
       const state = useAppStore.getState();
 

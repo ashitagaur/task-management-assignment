@@ -13,7 +13,7 @@ function AppContent() {
   const route = useActiveList();
   const viewMode = useAppStore((state) => state.viewMode);
   const drawer = useDrawer();
-  const { isLoading, isFading } = useSimulatedLoad(route.activeListId, 250);
+  const { isLoading, isFading } = useSimulatedLoad(route.activeListId, 80);
 
   const handleOpenCreate = (statusId?: string) => {
     if (route.activeList) {
@@ -37,7 +37,7 @@ function AppContent() {
             <div
               className={
                 isFading
-                  ? 'transition-opacity duration-200 ease-out opacity-100'
+                  ? 'transition-opacity duration-150 ease-out opacity-100'
                   : isLoading
                   ? 'opacity-0'
                   : ''
@@ -62,7 +62,7 @@ function AppContent() {
             {/* Shimmer skeleton overlay: visible ONLY during initial app load / refresh */}
             {isLoading && (
               <div
-                className={`absolute inset-0 z-10 bg-fb-canvas transition-opacity duration-200 ease-out pointer-events-none ${
+                className={`absolute inset-0 z-10 bg-fb-canvas transition-opacity duration-150 ease-out pointer-events-none ${
                   isFading ? 'opacity-0' : 'opacity-100'
                 }`}
                 aria-hidden="true"
