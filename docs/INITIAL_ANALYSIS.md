@@ -58,7 +58,7 @@ There is no backend server. All state lives on the client, seeded from determini
 ## 6. Scope Decisions & Assumptions
 
 * **Storage Strategy**: Domain state (tasks, containers, statuses) resets from fixtures on reload to prevent stale evaluation state. Session identity (`activeUserId`) and sidebar collapse state (`sidebarCollapsed`) persist in `sessionStorage`.
-* **Container DnD**: Excluded. Basic button-driven reordering and nesting satisfies container requirements.
+* **Container DnD**: Fully implemented across every sibling level in the hierarchy (Spaces within Workspace, Folders within Space, Lists within Folder). Strictly enforces same-parent and same-type invariants, position-only mutation (parentId is strictly immutable), cross-level drop rejection, role permission enforcement, and backward-compatible button-driven Move Up/Down actions.
 * **Activity Feed**: Excluded from the task drawer to focus on core metadata and property editing.
 * **Global Search / Filter / Sort**: Retained as visual affordances with "Upgrade to Premium" tooltips to preserve Figma fidelity without partial or broken implementations.
 * **Inline Styles**: Disallowed across the codebase with one narrow exception: `@dnd-kit` hardware-accelerated transform coordinate styles on active drag cards.

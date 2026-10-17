@@ -1,5 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import { Layout, X, Plus, ChevronRight, MoreHorizontal } from 'lucide-react';
+import {
+  Layout,
+  X,
+  Plus,
+  ChevronRight,
+  MoreHorizontal,
+  GripVertical,
+  Folder,
+  Hash,
+} from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  closestCenter,
+  DragStartEvent,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ContainerNode, ContainerType } from '../../domain/types';
 import { useAppStore, getPermissionContext } from '../../store/store';
 import { getFilteredTree } from '../../store/selectors';
@@ -29,11 +49,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const fullState = useAppStore((state) => state);
   const activeUserId = useAppStore((state) => state.activeUserId);
   const usersById = useAppStore((state) => state.usersById);
+  const containersById = useAppStore((state) => state.containersById);
   const createContainer = useAppStore((state) => state.createContainer);
   const createList = useAppStore((state) => state.createList);
   const renameContainer = useAppStore((state) => state.renameContainer);
+  const reorderSiblingContainers = useAppStore(
+    (state) => state.reorderSiblingContainers
+  );
 
   const currentUser = usersById[activeUserId];
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const activeDragNode = activeDragId ? containersById[activeDragId] : null;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (!over || active.id === over.id) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    const activeNode = containersById[activeId];
+    const overNode = containersById[overId];
+
+    // Strictly reject cross-parent, cross-type, or workspace drops
+    if (
+      !activeNode ||
+      !overNode ||
+      activeNode.type === 'workspace' ||
+      overNode.type === 'workspace' ||
+      activeNode.parentId !== overNode.parentId ||
+      activeNode.type !== overNode.type
+    ) {
+      return;
+    }
+
+    reorderSiblingContainers(activeId, overId);
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragId(null);
+  };
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -223,31 +293,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* Tree Nodes */}
-        <div className="space-y-1">
-          {spaces.length > 0 ? (
-            spaces.map((space, idx) => (
-              <TreeNode
-                key={space.id}
-                node={space}
-                childrenNodes={childrenByParent.get(space.id) || []}
-                childrenByParent={childrenByParent}
-                activeListId={activeListId}
-                onSelectList={onSelectList}
-                onOpenCreateModal={handleOpenCreateModal}
-                onOpenRenameModal={handleOpenRenameModal}
-                isFirstSibling={idx === 0}
-                isLastSibling={idx === spaces.length - 1}
-                level={0}
-                isCollapsed={isCollapsed}
-              />
-            ))
-          ) : (
-            <div className="px-2 py-4 text-xs text-gray-500 italic text-center">
-              No spaces visible for this user.
+        {/* Tree Nodes with DndContext */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <SortableContext
+            items={spaces.map((s) => s.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-1">
+              {spaces.length > 0 ? (
+                spaces.map((space, idx) => (
+                  <TreeNode
+                    key={space.id}
+                    node={space}
+                    childrenNodes={childrenByParent.get(space.id) || []}
+                    childrenByParent={childrenByParent}
+                    activeListId={activeListId}
+                    onSelectList={onSelectList}
+                    onOpenCreateModal={handleOpenCreateModal}
+                    onOpenRenameModal={handleOpenRenameModal}
+                    isFirstSibling={idx === 0}
+                    isLastSibling={idx === spaces.length - 1}
+                    level={0}
+                    isCollapsed={isCollapsed}
+                  />
+                ))
+              ) : (
+                <div className="px-2 py-4 text-xs text-gray-500 italic text-center">
+                  No spaces visible for this user.
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </SortableContext>
+
+          <DragOverlay dropAnimation={null}>
+            {activeDragNode ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800 text-white shadow-xl border border-gray-700 text-xs font-medium cursor-grabbing pointer-events-none opacity-95">
+                <GripVertical className="w-3.5 h-3.5 text-gray-400" />
+                {activeDragNode.type === 'space' && (
+                  <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                )}
+                {activeDragNode.type === 'folder' && (
+                  <Folder className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                )}
+                {activeDragNode.type === 'list' && (
+                  <Hash className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                )}
+                <span className="truncate">{activeDragNode.name}</span>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       {/* Current User Footer matching Figma Frame 1:4 */}

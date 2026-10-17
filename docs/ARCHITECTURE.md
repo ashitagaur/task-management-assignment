@@ -97,6 +97,15 @@ Workspace (Root)
 * A Space can only be created under a Workspace.
 * Moving a container validates that the new parent is not a descendant of the moved container, preventing tree cycles.
 
+### Sibling Container Reordering Invariants:
+* **Spaces**: Reorder strictly among Spaces under the same Workspace (`parentId === rootWorkspace.id`).
+* **Folders**: Reorder strictly among Folders under the same Space (`parentId === space.id`).
+* **Lists**: Reorder strictly among Lists under the same Folder (`parentId === folder.id`).
+* **Root Workspace**: Non-draggable and immutable.
+* **Position-Only Mutation**: Drag-and-drop modifies only `position` indices (re-indexed contiguous `0..n-1`). `parentId` is strictly immutable during sibling reordering.
+* **Drop Safety**: Cross-parent, cross-type, and cross-level drops are strictly rejected both in the UI sensor layer and store boundary.
+* **Coexistence**: Accessible button-driven `moveContainerUp` and `moveContainerDown` actions remain fully supported alongside drag-and-drop.
+
 ---
 
 ## 5. Task and Status Workflow Modeling

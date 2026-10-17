@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash, GripVertical } from 'lucide-react';
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { ContainerNode, ContainerType } from '../../domain/types';
-import { useAppStore } from '../../store/store';
+import { useAppStore, getPermissionContext } from '../../store/store';
+import { canReorderContainer } from '../../domain/permissions';
 import { getTaskCount } from '../../store/selectors';
 import { ContainerMenu } from './ContainerMenu';
 
@@ -39,6 +42,34 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
   const isActive = isList && node.id === activeListId;
   const hasChildren = childrenNodes.length > 0;
   const taskCount = isList ? getTaskCount(fullState, node.id) : 0;
+
+  const activeUserId = useAppStore((state) => state.activeUserId);
+  const context = useAppStore(getPermissionContext);
+  const canReorder = canReorderContainer(activeUserId, node.id, context);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: node.id,
+    disabled: !canReorder || isCollapsed,
+    data: {
+      type: node.type,
+      parentId: node.parentId,
+      node,
+    },
+  });
+
+  const style: React.CSSProperties = {
+    // DND-EXCEPTION: inline styles required for @dnd-kit transform and transition
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : undefined,
+  };
 
   // Collapsed Sidebar Compact Rail Mode
   if (isCollapsed) {
@@ -113,11 +144,15 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     <div className="select-none">
       {/* Node Row Container */}
       <div
+        ref={setNodeRef}
+        style={style}
         className={`group relative flex items-center justify-between rounded-lg transition-colors ${
           isActive
             ? 'bg-fb-sidebar-active'
             : 'hover:bg-gray-800/50'
         }`}
+        {...attributes}
+        {...listeners}
       >
         {/* Semantic Action: Expand/Collapse button for containers OR Navigation button for lists */}
         {!isList ? (
@@ -131,6 +166,16 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
               isActive ? 'text-white font-semibold' : 'text-gray-300 hover:text-white'
             }`}
           >
+            {canReorder && !isCollapsed && (
+              <span
+                className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity -ml-1 text-gray-400 cursor-grab active:cursor-grabbing shrink-0"
+                title="Drag to reorder"
+                aria-hidden="true"
+              >
+                <GripVertical className="w-3 h-3" />
+              </span>
+            )}
+
             <span className="p-0.5 rounded text-gray-400 group-hover:text-white shrink-0" aria-hidden="true">
               {isExpanded ? (
                 <ChevronDown className="w-3.5 h-3.5" />
@@ -161,6 +206,16 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
               isActive ? 'text-white font-semibold' : 'text-gray-300 hover:text-white'
             }`}
           >
+            {canReorder && !isCollapsed && (
+              <span
+                className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity -ml-1 text-gray-400 cursor-grab active:cursor-grabbing shrink-0"
+                title="Drag to reorder"
+                aria-hidden="true"
+              >
+                <GripVertical className="w-3 h-3" />
+              </span>
+            )}
+
             <span className="w-3.5 flex items-center justify-center shrink-0" aria-hidden="true">
               <Hash className="w-3 h-3 text-gray-500" />
             </span>
@@ -183,7 +238,10 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
             </span>
           )}
 
-          <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+          <div
+            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <ContainerMenu
               node={node}
               onOpenCreateModal={(childType) => onOpenCreateModal(node, childType)}
@@ -198,21 +256,26 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
       {/* Child Nodes */}
       {!isList && isExpanded && hasChildren && (
         <div id={`container-children-${node.id}`} className="mt-0.5 space-y-0.5">
-          {childrenNodes.map((child, idx) => (
-            <TreeNode
-              key={child.id}
-              node={child}
-              childrenNodes={childrenByParent.get(child.id) || []}
-              childrenByParent={childrenByParent}
-              activeListId={activeListId}
-              onSelectList={onSelectList}
-              onOpenCreateModal={onOpenCreateModal}
-              onOpenRenameModal={onOpenRenameModal}
-              isFirstSibling={idx === 0}
-              isLastSibling={idx === childrenNodes.length - 1}
-              level={level + 1}
-            />
-          ))}
+          <SortableContext
+            items={childrenNodes.map((child) => child.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {childrenNodes.map((child, idx) => (
+              <TreeNode
+                key={child.id}
+                node={child}
+                childrenNodes={childrenByParent.get(child.id) || []}
+                childrenByParent={childrenByParent}
+                activeListId={activeListId}
+                onSelectList={onSelectList}
+                onOpenCreateModal={onOpenCreateModal}
+                onOpenRenameModal={onOpenRenameModal}
+                isFirstSibling={idx === 0}
+                isLastSibling={idx === childrenNodes.length - 1}
+                level={level + 1}
+              />
+            ))}
+          </SortableContext>
         </div>
       )}
     </div>

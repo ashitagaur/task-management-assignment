@@ -85,6 +85,10 @@ export interface AppStoreState {
   archiveContainer: (id: string) => AppResult<ContainerNode>;
   moveContainerUp: (id: string) => AppResult<void>;
   moveContainerDown: (id: string) => AppResult<void>;
+  reorderSiblingContainers: (
+    activeId: string,
+    overId: string
+  ) => AppResult<void>;
 
   // Task Mutations
   createTask: (listId: string, data: CreateTaskInput) => AppResult<Task>;
@@ -462,6 +466,76 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     swapped[currentIndex + 1] = target;
 
     const reindexed = reindexPositions(swapped);
+    const updatedMap = { ...state.containersById };
+    for (const c of reindexed) {
+      updatedMap[c.id] = c;
+    }
+
+    set({ containersById: updatedMap });
+    return success(undefined);
+  },
+
+  // 6b. Reorder Sibling Containers (DnD)
+  reorderSiblingContainers: (activeId, overId) => {
+    const state = get();
+    const context = getPermissionContext(state);
+
+    if (activeId === overId) {
+      return success(undefined);
+    }
+
+    const activeNode = state.containersById[activeId];
+    const overNode = state.containersById[overId];
+
+    if (!activeNode || activeNode.archived) {
+      return failure('NOT_FOUND', `Container ${activeId} not found or archived`);
+    }
+
+    if (!overNode || overNode.archived) {
+      return failure('NOT_FOUND', `Container ${overId} not found or archived`);
+    }
+
+    // Workspace itself is not draggable / reorderable
+    if (activeNode.type === 'workspace' || overNode.type === 'workspace') {
+      return failure('VALIDATION_ERROR', 'Workspace cannot be reordered');
+    }
+
+    if (!canReorderContainer(state.activeUserId, activeId, context)) {
+      return failure('FORBIDDEN', 'Permission denied to reorder containers');
+    }
+
+    // Rule: Must have the exact same parentId and same type
+    // Reject cross-parent, cross-type, and cross-level drops
+    if (activeNode.parentId !== overNode.parentId || activeNode.type !== overNode.type) {
+      return failure(
+        'INVALID_PARENTAGE',
+        'Can only reorder siblings with the same parentId and same type'
+      );
+    }
+
+    // Gather all active unarchived siblings of this exact parent and type, ordered by position
+    const siblings = Object.values(state.containersById)
+      .filter((c) => c.parentId === activeNode.parentId && c.type === activeNode.type && !c.archived)
+      .sort((a, b) => a.position - b.position);
+
+    const fromIndex = siblings.findIndex((c) => c.id === activeId);
+    const toIndex = siblings.findIndex((c) => c.id === overId);
+
+    if (fromIndex === -1 || toIndex === -1) {
+      return failure('NOT_FOUND', 'Active or over container not found among siblings');
+    }
+
+    if (fromIndex === toIndex) {
+      return success(undefined);
+    }
+
+    const reordered = [...siblings];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved!);
+
+    // Reindex contiguous 0..n-1 positions
+    // Invariant: parentId is strictly preserved and never mutated
+    const reindexed = reindexPositions(reordered);
     const updatedMap = { ...state.containersById };
     for (const c of reindexed) {
       updatedMap[c.id] = c;
